@@ -404,6 +404,13 @@ Create `phpcs.xml.dist`:
     <rule ref="WordPress.Files.FileName">
         <exclude-pattern type="relative">^includes/</exclude-pattern>
     </rule>
+    <!-- Approved DTO interfaces use camelCase OO members; procedural naming rules remain enabled. -->
+    <rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
+        <exclude-pattern type="relative">^includes/</exclude-pattern>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase">
+        <exclude-pattern type="relative">^includes/</exclude-pattern>
+    </rule>
 </ruleset>
 ```
 
