@@ -61,3 +61,40 @@ Implemented the four schedule hierarchy repositories and `ScheduleRepositoryTest
 - Runtime integration, WPCS, PHPStan, and distribution build results are unconfirmed until Docker Desktop or equivalent PHP tooling is available.
 - The required single integration test and title repository are intentionally cohesive files and exceed the audit guideline's ideal 300-line size; splitting them would violate the explicitly constrained Task 5 file/interface scope.
 - No defensive runtime category (retry, rate limit, circuit breaker, timeout, graceful degradation) was added; none applies to repository persistence in this task.
+
+## Review Resolution
+
+All High, Medium, and Low findings from `.superpowers/sdd/task-5-review.md` were addressed in a follow-up TDD cycle.
+
+### Reconciliation Contracts
+
+- Every candidate is now updated separately with its complete original parent/API/currently-active/unseen-or-cascade predicate repeated in the conditional `UPDATE`.
+- A `$wpdb->query()` result of `false` throws a repository-specific safe `RuntimeException`; no raw SQL or database error is exposed.
+- Only `result === 1` IDs are collected. A zero-row result is treated as a stale candidate and omitted. The price cascade returns the count of only those collected IDs.
+- Forced-query-failure tests cover title, event, and sector affected-ID array contracts plus the price affected-count contract and confirm rows remain active.
+- A zero-row conditional-update test confirms preselected stale IDs are not reported as affected.
+
+### Expanded Behavioral Coverage
+
+- CRUD tests assign and compare every DTO field for API title, event, sector, and price rows, including nullable fields, synchronization fields, decimal strings, generated `created_at`, and generated `updated_at`.
+- Manual nullable remote identities remain covered at all four hierarchy levels, including forced manual synchronization state.
+- Ownership tests now use valid children with different valid positive parents at event, sector, and price levels.
+- Direct `delete()` and delete-by-parent tests retain and inspect descendants before explicitly removing them, proving repositories do not recurse.
+- Public projection coverage compares all 13 `ProgrammazioneCard` fields.
+- Public count coverage supplies matching filters with `limit=1` and a nonzero offset, proves the page is empty, and proves filtered count remains one.
+- Reviewer-cited inline closures, filter arrays, and long assertions were expanded to multiline WordPress formatting.
+
+### Follow-Up Verification
+
+1. Red focused attempt after adding review regression tests: `docker compose run --rm php composer test:integration -- --filter ScheduleRepositoryTest`.
+2. Green focused attempt after repository changes: repeated the same command.
+3. Full follow-up attempt: `docker compose run --rm php composer check`.
+4. All three commands were blocked before Composer/PHPUnit by the accepted unavailable Docker Desktop Linux engine pipe.
+5. `git diff --check` produced no whitespace errors; output contained only existing Windows LF-to-CRLF warnings.
+6. Static search found exactly four reconciliation query calls, each checking `false` and `1`, and exactly four conditional updates retaining `WHERE id = %d AND {$where}`.
+
+### Follow-Up Commit
+
+- Message: `fix: enforce hierarchy repository contracts`
+- Semantic-release effect: patch release.
+- Commit hash: recorded in the final handoff because this report is part of the follow-up commit.

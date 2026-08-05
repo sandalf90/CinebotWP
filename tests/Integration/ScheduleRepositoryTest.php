@@ -77,37 +77,100 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 	 * Every hierarchy level maps all fields and permits multiple manual null identities.
 	 */
 	public function test_crud_maps_dtos_and_preserves_timestamps_and_manual_sync_state(): void {
-		$title = $this->title( null, 'Manual title', 'manual' );
+		$venue_id = $this->venue( 'Venue', 'Roma' );
+		$title = $this->title( 501, 'Mapped title', 'api', 42, 'title-token' );
+		$title->autore = 'Mapped author';
+		$title->esecutore = 'Mapped performer';
+		$title->durata = 125;
+		$title->scadenza = 1;
+		$title->descrizione = 'Mapped description';
+		$title->locandinaFlag = 1;
+		$title->locandinaUrl = 'https://example.test/poster.jpg';
+		$title->cinetel = 'CINETEL-1';
+		$title->tmdb = 'TMDB-2';
+		$title->trailer = 'https://example.test/trailer';
+		$title->cast = 'Mapped cast';
 		$title->tag = array( 'family', array( 'key' => 'value' ) );
-		$title->lastSeenSync = 'must-clear';
+		$title->syncHash = 'mapped-title-hash';
 		$title->syncActive = 0;
 		$title_id = $this->titles->save( $title );
-		$other_title_id = $this->titles->save( $this->title( null, 'Other manual', 'manual' ) );
 		$stored_title = $this->titles->find( $title_id );
 		self::assertInstanceOf( Titolo::class, $stored_title );
-		self::assertSame( array( 'family', array( 'key' => 'value' ) ), $stored_title->tag );
-		self::assertSame( 1, $stored_title->syncActive );
-		self::assertNull( $stored_title->lastSeenSync );
-		self::assertNotSame( $title_id, $other_title_id );
+		$this->assert_complete_dto( $title, $stored_title, $title_id );
 
-		$venue_id = $this->venue( 'Venue', 'Roma' );
-		$event_id = $this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
-		$other_event_id = $this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
-		$sector_id = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		$other_sector_id = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		$price_id = $this->prices->save( $this->price( null, $sector_id, '12.50', 1, 'manual' ) );
-		$other_price_id = $this->prices->save( $this->price( null, $sector_id, '14.50', 1, 'manual' ) );
+		$event = $this->event( 601, $title_id, $venue_id, 'api', '2030-02-03 19:45:00', 'event-token' );
+		$event->organizzatoreId = 701;
+		$event->organizzatoreCf = 'ORG-CF-01';
+		$event->stato = 2;
+		$event->otp = 1;
+		$event->controlloaccessi = 0;
+		$event->mappa = 81;
+		$event->syncActive = 0;
+		$event_id = $this->events->save( $event );
+		$stored_event = $this->events->findByRemoteId( 601 );
+		self::assertInstanceOf( Evento::class, $stored_event );
+		$this->assert_complete_dto( $event, $stored_event, $event_id );
 
-		self::assertNotSame( $event_id, $other_event_id );
-		self::assertNotSame( $sector_id, $other_sector_id );
-		self::assertNotSame( $price_id, $other_price_id );
-		self::assertContainsOnlyInstancesOf( Evento::class, $this->events->findByTitoloId( $title_id ) );
-		self::assertContainsOnlyInstancesOf( Settore::class, $this->sectors->findByEventoId( $event_id ) );
-		self::assertContainsOnlyInstancesOf( Prezzo::class, $this->prices->findBySettoreId( $sector_id ) );
-		self::assertTrue( $this->events->belongsToTitolo( $event_id, $title_id ) );
-		self::assertTrue( $this->sectors->belongsToEvento( $sector_id, $event_id ) );
-		self::assertTrue( $this->prices->belongsToSettore( $price_id, $sector_id ) );
+		$sector = $this->sector( 801, $event_id, 'api', 'sector-token' );
+		$sector->nome = 'Mapped sector';
+		$sector->syncActive = 0;
+		$sector_id = $this->sectors->save( $sector );
+		$stored_sector = $this->sectors->findByRemoteId( $event_id, 801 );
+		self::assertInstanceOf( Settore::class, $stored_sector );
+		$this->assert_complete_dto( $sector, $stored_sector, $sector_id );
+
+		$price = $this->price( 901, $sector_id, '12.50', 2, 'api', 'price-token' );
+		$price->nome = 'Mapped price';
+		$price->tipo = 'RID';
+		$price->prevendita = '1.75';
+		$price->syncActive = 0;
+		$price_id = $this->prices->save( $price );
+		$stored_price = $this->prices->findByRemoteId( $sector_id, 901 );
+		self::assertInstanceOf( Prezzo::class, $stored_price );
+		$this->assert_complete_dto( $price, $stored_price, $price_id );
+		self::assertSame( '12.50', $stored_price->importo );
+		self::assertSame( '1.75', $stored_price->prevendita );
+
+		$manual_title = $this->title( null, 'Manual title', 'manual' );
+		$manual_title->syncActive = 0;
+		$manual_title->lastSeenSync = 'must-clear';
+		$manual_title_id = $this->titles->save( $manual_title );
+		$other_title_id = $this->titles->save( $this->title( null, 'Other manual', 'manual' ) );
+		$stored_manual_title = $this->titles->find( $manual_title_id );
+		self::assertInstanceOf( Titolo::class, $stored_manual_title );
+		self::assertSame( 1, $stored_manual_title->syncActive );
+		self::assertNull( $stored_manual_title->lastSeenSync );
+		self::assertNotSame( $manual_title_id, $other_title_id );
+
+		$manual_event = $this->event( null, $manual_title_id, $venue_id, 'manual' );
+		$manual_event->syncActive = 0;
+		$manual_event_id = $this->events->save( $manual_event );
+		$other_event_id = $this->events->save( $this->event( null, $manual_title_id, $venue_id, 'manual' ) );
+		$manual_sector = $this->sector( null, $manual_event_id, 'manual' );
+		$manual_sector->syncActive = 0;
+		$manual_sector_id = $this->sectors->save( $manual_sector );
+		$other_sector_id = $this->sectors->save( $this->sector( null, $manual_event_id, 'manual' ) );
+		$manual_price = $this->price( null, $manual_sector_id, '14.50', 1, 'manual' );
+		$manual_price->syncActive = 0;
+		$manual_price_id = $this->prices->save( $manual_price );
+		$other_price_id = $this->prices->save( $this->price( null, $manual_sector_id, '15.50', 1, 'manual' ) );
+
+		self::assertNotSame( $manual_event_id, $other_event_id );
+		self::assertNotSame( $manual_sector_id, $other_sector_id );
+		self::assertNotSame( $manual_price_id, $other_price_id );
+		self::assertTrue( $this->events->belongsToTitolo( $manual_event_id, $manual_title_id ) );
+		self::assertTrue( $this->sectors->belongsToEvento( $manual_sector_id, $manual_event_id ) );
+		self::assertTrue( $this->prices->belongsToSettore( $manual_price_id, $manual_sector_id ) );
 		self::assertFalse( $this->events->belongsToTitolo( 0, $title_id ) );
+		$stored_manual_event = $this->events->findByTitoloId( $manual_title_id )[0];
+		$stored_manual_sector = $this->sectors->findByEventoId( $manual_event_id )[0];
+		$stored_manual_price = $this->prices->findBySettoreId( $manual_sector_id )[0];
+		self::assertSame( 1, $stored_manual_event->syncActive );
+		self::assertNull( $stored_manual_event->lastSeenSync );
+		self::assertSame( 1, $stored_manual_sector->syncActive );
+		self::assertNull( $stored_manual_sector->lastSeenSync );
+		self::assertSame( 1, $stored_manual_price->syncActive );
+		self::assertNull( $stored_manual_price->lastSeenSync );
 
 		$created_at = $stored_title->createdAt;
 		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'updated_at' => '2000-01-01 00:00:00' ), array( 'id' => $title_id ) );
@@ -115,6 +178,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$stored_title->titolo = 'Updated title';
 		$this->titles->save( $stored_title );
 		$updated = $this->titles->find( $title_id );
+		self::assertInstanceOf( Titolo::class, $updated );
 		self::assertSame( $created_at, $updated->createdAt );
 		self::assertNotSame( '2000-01-01 00:00:00', $updated->updatedAt );
 	}
@@ -197,9 +261,20 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		self::assertSame( 'Beta', $rows[0]->titolo );
 		self::assertSame( count( $rows ), $this->titles->count( $filters ) );
 		self::assertSame( 0, $this->titles->count( array( 'search' => "%_' OR 1=1 --" ) ) );
-		self::assertSame( array( 'Alpha Needle', 'Beta', 'Gamma' ), array_map( static function ( Titolo $title ): string { return $title->titolo; }, $this->titles->search( array(), 1, 20 ) ) );
+		self::assertSame(
+			array( 'Alpha Needle', 'Beta', 'Gamma' ),
+			array_map(
+				static function ( Titolo $title ): string {
+					return $title->titolo;
+				},
+				$this->titles->search( array(), 1, 20 )
+			)
+		);
 		self::assertSame( 2, $this->titles->countByTypeCode( '01' ) );
-		self::assertSame( array( 'titoli_totali', 'titoli_manuali', 'eventi_totali', 'locali_totali', 'tipologie_attive' ), array_keys( $this->titles->statistics() ) );
+		self::assertSame(
+			array( 'titoli_totali', 'titoli_manuali', 'eventi_totali', 'locali_totali', 'tipologie_attive' ),
+			array_keys( $this->titles->statistics() )
+		);
 		self::assertSame( 3, $this->titles->statistics()['titoli_totali'] );
 		self::assertSame( 2, $this->titles->statistics()['titoli_manuali'] );
 	}
@@ -224,16 +299,55 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$cards = $this->titles->findPublicSchedule( array() );
 		self::assertCount( 2, $cards );
 		self::assertContainsOnlyInstancesOf( ProgrammazioneCard::class, $cards );
-		self::assertSame( '10.00', $cards[0]->prezzoMin );
-		self::assertSame( '20.00', $cards[0]->prezzoMax );
+		self::assertSame(
+			array(
+				'evento_id' => $event_id,
+				'inizio' => $future,
+				'titolo_id' => $title_id,
+				'titolo' => 'Zulu Show',
+				'descrizione' => 'Description',
+				'locandina_url' => null,
+				'tipo_codice' => '01',
+				'tipo_descrizione' => 'CINEMA',
+				'locale_id' => $rome,
+				'locale_nome' => 'Rome Hall',
+				'comune' => 'Roma',
+				'prezzo_min' => '10.00',
+				'prezzo_max' => '20.00',
+			),
+			$this->card_to_array( $cards[0] )
+		);
 		self::assertNull( $cards[1]->prezzoMin );
 		self::assertSame( 2, $this->titles->countPublicSchedule( array() ) );
 
-		$filters = array( 'tipo' => '01', 'locale' => $rome, 'comune' => 'Roma', 'from' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS ), 'to' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS * 15 ), 'orderby' => 'titolo', 'order' => 'DESC', 'limit' => 1, 'offset' => 0 );
+		$filters = array(
+			'tipo' => '01',
+			'locale' => $rome,
+			'comune' => 'Roma',
+			'from' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS ),
+			'to' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS * 15 ),
+			'orderby' => 'titolo',
+			'order' => 'DESC',
+			'limit' => 1,
+			'offset' => 0,
+		);
 		self::assertCount( 1, $this->titles->findPublicSchedule( $filters ) );
 		self::assertSame( 1, $this->titles->countPublicSchedule( $filters ) );
-		self::assertSame( $event_id, $this->titles->findPublicSchedule( array( 'orderby' => 'injection', 'order' => 'DROP TABLE', 'limit' => 999 ) )[0]->eventoId );
-		self::assertSame( $no_price_event, $this->titles->findPublicSchedule( array( 'orderby' => 'titolo', 'order' => 'ASC', 'limit' => 1, 'offset' => 0 ) )[0]->eventoId );
+		$empty_page_filters = array_merge( $filters, array( 'offset' => 1 ) );
+		self::assertSame( array(), $this->titles->findPublicSchedule( $empty_page_filters ) );
+		self::assertSame( 1, $this->titles->countPublicSchedule( $empty_page_filters ) );
+		self::assertSame(
+			$event_id,
+			$this->titles->findPublicSchedule(
+				array( 'orderby' => 'injection', 'order' => 'DROP TABLE', 'limit' => 999 )
+			)[0]->eventoId
+		);
+		self::assertSame(
+			$no_price_event,
+			$this->titles->findPublicSchedule(
+				array( 'orderby' => 'titolo', 'order' => 'ASC', 'limit' => 1, 'offset' => 0 )
+			)[0]->eventoId
+		);
 
 		self::$db->update( self::$db->prefix . 'cinebot_settori', array( 'sync_active' => 0 ), array( 'id' => $sector_id ) );
 		self::assertNull( $this->titles->findPublicSchedule( array() )[0]->prezzoMin );
@@ -241,42 +355,63 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		self::$db->update( self::$db->prefix . 'cinebot_prezzi', array( 'sync_active' => 0 ), array( 'idprezzo' => 41 ) );
 		self::assertSame( '20.00', $this->titles->findPublicSchedule( array() )[0]->prezzoMin );
 		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'sync_active' => 0 ), array( 'id' => $second_id ) );
-		self::assertSame( array( $event_id ), array_map( static function ( ProgrammazioneCard $card ): int { return $card->eventoId; }, $this->titles->findPublicSchedule( array() ) ) );
+		self::assertSame(
+			array( $event_id ),
+			$this->card_ids( $this->titles->findPublicSchedule( array() ) )
+		);
 		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'sync_active' => 1 ), array( 'id' => $second_id ) );
 		self::$db->update( self::$db->prefix . 'cinebot_eventi', array( 'stato' => 2 ), array( 'id' => $no_price_event ) );
 		self::assertSame( 1, $this->titles->countPublicSchedule( array() ) );
 		self::$db->update( self::$db->prefix . 'cinebot_eventi', array( 'stato' => 3 ), array( 'id' => $no_price_event ) );
 		$past = $this->events->save( $this->event( 22, $title_id, $rome, 'api', gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ) ) );
-		self::assertNotContains( $past, array_map( static function ( ProgrammazioneCard $card ): int { return $card->eventoId; }, $this->titles->findPublicSchedule( array() ) ) );
+		self::assertNotContains(
+			$past,
+			$this->card_ids( $this->titles->findPublicSchedule( array() ) )
+		);
 
 		self::$db->update( self::$db->prefix . 'cinebot_eventi', array( 'sync_active' => 0 ), array( 'id' => $event_id ) );
-		self::assertSame( array( $no_price_event ), array_map( static function ( ProgrammazioneCard $card ): int { return $card->eventoId; }, $this->titles->findPublicSchedule( array() ) ) );
+		self::assertSame(
+			array( $no_price_event ),
+			$this->card_ids( $this->titles->findPublicSchedule( array() ) )
+		);
 	}
 
 	/**
-	 * Parent deletes and counts are exact and do not recursively mutate descendants.
+	 * Ownership rejects wrong positive parents and direct deletes retain descendants.
 	 */
 	public function test_counts_deletes_and_delete_by_parent_contracts(): void {
-		$title_id = $this->titles->save( $this->title( null, 'Delete', 'manual' ) );
+		$title_id = $this->titles->save( $this->title( null, 'Delete one', 'manual' ) );
+		$other_title_id = $this->titles->save( $this->title( null, 'Delete two', 'manual' ) );
 		$venue_id = $this->venue( 'Delete venue', 'Roma' );
 		$event_id = $this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
+		$other_event_id = $this->events->save( $this->event( null, $other_title_id, $venue_id, 'manual' ) );
 		$sector_id = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
+		$other_sector_id = $this->sectors->save( $this->sector( null, $other_event_id, 'manual' ) );
 		$price_id = $this->prices->save( $this->price( null, $sector_id, '5.00', 1, 'manual' ) );
+		$other_price_id = $this->prices->save( $this->price( null, $other_sector_id, '6.00', 1, 'manual' ) );
 
 		self::assertSame( 1, $this->events->countByTitoloId( $title_id ) );
-		self::assertSame( 1, $this->events->countByLocaleId( $venue_id ) );
+		self::assertSame( 2, $this->events->countByLocaleId( $venue_id ) );
+		self::assertFalse( $this->events->belongsToTitolo( $event_id, $other_title_id ) );
+		self::assertFalse( $this->sectors->belongsToEvento( $sector_id, $other_event_id ) );
+		self::assertFalse( $this->prices->belongsToSettore( $price_id, $other_sector_id ) );
+
+		self::assertTrue( $this->titles->delete( $title_id ) );
+		self::assertCount( 1, $this->events->findByTitoloId( $title_id ) );
+		self::assertTrue( $this->events->delete( $event_id ) );
+		self::assertCount( 1, $this->sectors->findByEventoId( $event_id ) );
+		self::assertTrue( $this->sectors->delete( $sector_id ) );
+		self::assertCount( 1, $this->prices->findBySettoreId( $sector_id ) );
 		self::assertTrue( $this->prices->delete( $price_id ) );
 		self::assertFalse( $this->prices->delete( $price_id ) );
-		$this->prices->save( $this->price( null, $sector_id, '6.00', 1, 'manual' ) );
-		self::assertSame( 1, $this->prices->deleteBySettoreId( $sector_id ) );
-		self::assertTrue( $this->sectors->delete( $sector_id ) );
-		$this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		self::assertSame( 1, $this->sectors->deleteByEventoId( $event_id ) );
-		self::assertTrue( $this->events->delete( $event_id ) );
-		$this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
-		self::assertSame( 1, $this->events->deleteByTitoloId( $title_id ) );
-		self::assertTrue( $this->titles->delete( $title_id ) );
 		self::assertFalse( $this->titles->delete( $title_id ) );
+
+		self::assertSame( 1, $this->events->deleteByTitoloId( $other_title_id ) );
+		self::assertCount( 1, $this->sectors->findByEventoId( $other_event_id ) );
+		self::assertSame( 1, $this->sectors->deleteByEventoId( $other_event_id ) );
+		self::assertCount( 1, $this->prices->findBySettoreId( $other_sector_id ) );
+		self::assertSame( 1, $this->prices->deleteBySettoreId( $other_sector_id ) );
+		self::assertFalse( $this->prices->delete( $other_price_id ) );
 	}
 
 	/**
@@ -321,11 +456,158 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		self::assertSame( $cascade_price, $this->prices->findBySettoreId( $active_sector )[2]->id );
 	}
 
+	/**
+	 * Reconciliation update failures throw and cannot report selected candidates.
+	 */
+	public function test_reconciliation_query_failures_throw_for_every_return_contract(): void {
+		$title_id = $this->titles->save( $this->title( 1001, 'Failure title', 'api', 90, 'old' ) );
+		$venue_id = $this->venue( 'Failure venue', 'Roma' );
+		$event_id = $this->events->save( $this->event( 1002, $title_id, $venue_id, 'api', null, 'old' ) );
+		$sector_id = $this->sectors->save( $this->sector( 1003, $event_id, 'api', 'old' ) );
+		$this->prices->save( $this->price( 1004, $sector_id, '10.00', 1, 'api', 'old' ) );
+
+		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			/** Fail only reconciliation UPDATE statements. */
+			public function query( $query ) {
+				if ( is_string( $query ) && 1 === preg_match( '/^\s*UPDATE\s+/i', $query ) ) {
+					return false;
+				}
+				return parent::query( $query );
+			}
+		};
+		$failing_db->set_prefix( self::$db->prefix );
+
+		try {
+			$this->assert_reconciliation_failure(
+				static function () use ( $failing_db ): void {
+					( new TitoloRepository( $failing_db ) )->deactivateUnseenApi( 90, 'current' );
+				}
+			);
+			$this->assert_reconciliation_failure(
+				static function () use ( $failing_db, $title_id ): void {
+					( new EventoRepository( $failing_db ) )->deactivateByTitoloIds( array( $title_id ) );
+				}
+			);
+			$this->assert_reconciliation_failure(
+				static function () use ( $failing_db, $event_id ): void {
+					( new SettoreRepository( $failing_db ) )->deactivateByEventoIds( array( $event_id ) );
+				}
+			);
+			$this->assert_reconciliation_failure(
+				static function () use ( $failing_db, $sector_id ): void {
+					( new PrezzoRepository( $failing_db ) )->deactivateBySettoreIds( array( $sector_id ) );
+				}
+			);
+		} finally {
+			$failing_db->close();
+		}
+
+		self::assertSame( 1, $this->titles->find( $title_id )->syncActive );
+		self::assertSame( 1, $this->events->findByTitoloId( $title_id )[0]->syncActive );
+		self::assertSame( 1, $this->sectors->findByEventoId( $event_id )[0]->syncActive );
+		self::assertSame( 1, $this->prices->findBySettoreId( $sector_id )[0]->syncActive );
+	}
+
+	/**
+	 * A stale candidate whose conditional update affects zero rows is not returned.
+	 */
+	public function test_reconciliation_returns_only_ids_reported_as_updated(): void {
+		$title_id = $this->titles->save( $this->title( 1101, 'Stale title', 'api', 91, 'old' ) );
+		$zero_update_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			/** Simulate a candidate becoming stale before its conditional update. */
+			public function query( $query ) {
+				if ( is_string( $query ) && 1 === preg_match( '/^\s*UPDATE\s+/i', $query ) ) {
+					return 0;
+				}
+				return parent::query( $query );
+			}
+		};
+		$zero_update_db->set_prefix( self::$db->prefix );
+
+		try {
+			$repository = new TitoloRepository( $zero_update_db );
+			self::assertSame( array(), $repository->deactivateUnseenApi( 91, 'current' ) );
+		} finally {
+			$zero_update_db->close();
+		}
+
+		self::assertSame( 1, $this->titles->find( $title_id )->syncActive );
+	}
+
 	/** Clear hierarchy tables in child-first order. */
 	private function clear_tables(): void {
 		foreach ( array( 'prezzi', 'settori', 'eventi', 'titoli', 'locali' ) as $suffix ) {
 			self::$db->query( 'DELETE FROM ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
+	}
+
+	/**
+	 * Assert every DTO field plus generated timestamps.
+	 *
+	 * @param Titolo|Evento|Settore|Prezzo $expected Input DTO.
+	 * @param Titolo|Evento|Settore|Prezzo $actual Persisted DTO.
+	 */
+	private function assert_complete_dto( $expected, $actual, int $id ): void {
+		$expected_data = $expected->toArray();
+		$actual_data = $actual->toArray();
+		$expected_data['id'] = $id;
+		$expected_data['created_at'] = $actual_data['created_at'];
+		$expected_data['updated_at'] = $actual_data['updated_at'];
+		self::assertNotNull( $actual_data['created_at'] );
+		self::assertSame( $actual_data['created_at'], $actual_data['updated_at'] );
+		self::assertSame( $expected_data, $actual_data );
+	}
+
+	/** Assert a reconciliation write failure is safe and actionable. */
+	private function assert_reconciliation_failure( callable $operation ): void {
+		try {
+			$operation();
+			self::fail( 'A failed reconciliation update must throw.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertStringContainsString( 'deactivate', strtolower( $exception->getMessage() ) );
+			self::assertDoesNotMatchRegularExpression(
+				'/\b(?:select|update|delete|insert)\b/i',
+				$exception->getMessage()
+			);
+		}
+	}
+
+	/**
+	 * Convert one public card to its documented projection shape.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function card_to_array( ProgrammazioneCard $card ): array {
+		return array(
+			'evento_id' => $card->eventoId,
+			'inizio' => $card->inizio,
+			'titolo_id' => $card->titoloId,
+			'titolo' => $card->titolo,
+			'descrizione' => $card->descrizione,
+			'locandina_url' => $card->locandinaUrl,
+			'tipo_codice' => $card->tipoCodice,
+			'tipo_descrizione' => $card->tipoDescrizione,
+			'locale_id' => $card->localeId,
+			'locale_nome' => $card->localeNome,
+			'comune' => $card->comune,
+			'prezzo_min' => $card->prezzoMin,
+			'prezzo_max' => $card->prezzoMax,
+		);
+	}
+
+	/**
+	 * Return event IDs from public cards.
+	 *
+	 * @param array<int,ProgrammazioneCard> $cards Public cards.
+	 * @return array<int,int>
+	 */
+	private function card_ids( array $cards ): array {
+		return array_map(
+			static function ( ProgrammazioneCard $card ): int {
+				return $card->eventoId;
+			},
+			$cards
+		);
 	}
 
 	/** Create a title fixture. */

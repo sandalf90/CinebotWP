@@ -171,10 +171,21 @@ final class SettoreRepository {
 		if ( array() === $ids ) {
 			return array();
 		}
-		$marks = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$this->db->query( $this->db->prepare( "UPDATE {$this->table} SET sync_active = 0, updated_at = %s WHERE id IN ({$marks})", array_merge( array( current_time( 'mysql', true ) ), $ids ) ) );
-		return $ids;
+		$affected = array();
+		$now = current_time( 'mysql', true );
+		foreach ( $ids as $id ) {
+			$sql = "UPDATE {$this->table} SET sync_active = 0, updated_at = %s WHERE id = %d AND {$where}";
+			// The predicate is fixed internally and every dynamic value is prepared.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$result = $this->db->query( $this->db->prepare( $sql, array_merge( array( $now, $id ), $values ) ) );
+			if ( false === $result ) {
+				throw $this->reconciliation_exception();
+			}
+			if ( 1 === $result ) {
+				$affected[] = $id;
+			}
+		}
+		return $affected;
 	}
 
 	/**
@@ -206,5 +217,10 @@ final class SettoreRepository {
 	/** Build a safe persistence exception. */
 	private function save_exception(): RuntimeException {
 		return new RuntimeException( esc_html__( 'Cinebot WP could not save the sector. Verify its identifiers and try again.', 'cinebot-wp' ) );
+	}
+
+	/** Build a safe reconciliation exception. */
+	private function reconciliation_exception(): RuntimeException {
+		return new RuntimeException( esc_html__( 'Cinebot WP could not deactivate schedule sectors. Try again.', 'cinebot-wp' ) );
 	}
 }
