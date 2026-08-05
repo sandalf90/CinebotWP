@@ -102,8 +102,11 @@ final class SyncLogRepository {
 	/** Return the newest synchronization row. */
 	public function latest(): ?SyncLog {
 		// The table identifier and ordering are fixed trusted fragments.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$row = $this->db->get_row( "SELECT * FROM {$this->table} ORDER BY started_at DESC, id DESC LIMIT 1", ARRAY_A );
+		// phpcs:enable
 
 		return is_array( $row ) ? SyncLog::fromArray( $row ) : null;
 	}
@@ -116,8 +119,17 @@ final class SyncLogRepository {
 	public function recent( int $limit = 5 ): array {
 		$limit = max( 1, min( 100, $limit ) );
 		// The table identifier and ordering are fixed; the limit is prepared.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->db->get_results( $this->db->prepare( "SELECT * FROM {$this->table} ORDER BY started_at DESC, id DESC LIMIT %d", $limit ), ARRAY_A );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $this->db->get_results(
+			$this->db->prepare(
+				"SELECT * FROM {$this->table} ORDER BY started_at DESC, id DESC LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
 
 		return $this->hydrate_all( $rows );
 	}
@@ -135,8 +147,11 @@ final class SyncLogRepository {
 		$sql       = "SELECT * FROM {$this->table}{$predicate['sql']} ORDER BY started_at DESC, id DESC LIMIT %d OFFSET %d";
 		$values    = array_merge( $predicate['values'], array( $perPage, ( $page - 1 ) * $perPage ) );
 		// The table identifier and SQL fragments are fixed; every value is prepared.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $this->db->get_results( $this->db->prepare( $sql, $values ), ARRAY_A );
+		// phpcs:enable
 
 		return $this->hydrate_all( $rows );
 	}
@@ -153,8 +168,13 @@ final class SyncLogRepository {
 			$sql = $this->db->prepare( $sql, $predicate['values'] );
 		}
 		// The table identifier and predicate fragments are fixed, and dynamic values were prepared above.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
-		return (int) $this->db->get_var( $sql );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+		$count = (int) $this->db->get_var( $sql );
+		// phpcs:enable
+
+		return $count;
 	}
 
 	/**

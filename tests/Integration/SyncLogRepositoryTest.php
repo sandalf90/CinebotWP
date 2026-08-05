@@ -83,7 +83,12 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 
 	/** Finishing runs accepts approved outcomes, maps counters, and preserves start data. */
 	public function test_finish_stores_outcomes_counters_and_sanitized_error(): void {
-		$times = array( '2026-08-06 11:00:00', '2026-08-06 12:00:00', '2026-08-06 13:00:00' );
+		$times = array(
+			'2026-08-06 11:00:00',
+			'2026-08-06 12:00:00',
+			'2026-08-06 13:00:00',
+			'2026-08-06 14:00:00',
+		);
 		$clock = static function () use ( &$times ): string {
 			return array_shift( $times );
 		};
@@ -123,6 +128,8 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 		self::assertNull( $success['error_message'] );
 		self::assertSame( 'keep-me', $success['payload_hash'] );
 
+		self::assertSame( '2026-08-06 13:00:00', $partial['started_at'] );
+		self::assertSame( '2026-08-06 14:00:00', $partial['finished_at'] );
 		self::assertSame( 'partial', $partial['status'] );
 		self::assertSame( array( '0', '0', '0', '7' ), $this->counters( $partial ) );
 		self::assertSame( "Partial failure\r\nretry", $partial['error_message'] );
@@ -198,7 +205,18 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 		self::assertContainsOnlyInstancesOf( SyncLog::class, $recent );
 		self::assertSame( array( $newest, $newer ), $this->ids( $recent ) );
 		self::assertCount( 1, $this->repository->recent( 0 ) );
-		self::assertCount( 3, $this->repository->recent( 1000 ) );
+	}
+
+	/** Recent results conclusively clamp to 100 and break timestamp ties by descending ID. */
+	public function test_recent_clamps_to_one_hundred_with_deterministic_tie_order(): void {
+		$ids = array();
+		for ( $index = 0; $index < 101; $index++ ) {
+			$ids[] = $this->insert_log( '2026-08-02 09:00:00', 'success' );
+		}
+
+		$expected = array_reverse( array_slice( $ids, 1 ) );
+
+		self::assertSame( $expected, $this->ids( $this->repository->recent( 1000 ) ) );
 	}
 
 	/** Search and count share validated status/date predicates and pagination. */
@@ -228,6 +246,51 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 		self::assertSame( 4, $this->repository->count() );
 		self::assertSame( 4, $this->repository->count( $ignored ) );
 		self::assertCount( 4, $this->repository->search( $ignored, 1, 10 ) );
+	}
+
+	/** Search includes exact from/to values and excludes rows beyond either boundary. */
+	public function test_search_includes_exact_date_boundaries(): void {
+		$this->insert_log( '2026-08-01 07:59:59', 'success' );
+		$from = $this->insert_log( '2026-08-01 08:00:00', 'success' );
+		$to   = $this->insert_log( '2026-08-02 08:00:00', 'success' );
+		$this->insert_log( '2026-08-02 08:00:01', 'success' );
+
+		$filters = array(
+			'from' => '2026-08-01 08:00:00',
+			'to'   => '2026-08-02 08:00:00',
+		);
+
+		self::assertSame( array( $to, $from ), $this->ids( $this->repository->search( $filters, 1, 10 ) ) );
+		self::assertSame( 2, $this->repository->count( $filters ) );
+	}
+
+	/** Correctly shaped impossible calendar dates are ignored by search and count. */
+	public function test_search_ignores_invalid_calendar_dates(): void {
+		$old = $this->insert_log( '2026-02-01 08:00:00', 'success' );
+		$new = $this->insert_log( '2026-03-01 08:00:00', 'success' );
+		$filters = array(
+			'from' => '2026-02-30 00:00:00',
+			'to'   => '2026-13-01 00:00:00',
+		);
+
+		self::assertSame( array( $new, $old ), $this->ids( $this->repository->search( $filters, 1, 10 ) ) );
+		self::assertSame( 2, $this->repository->count( $filters ) );
+	}
+
+	/** Search orders timestamp ties by descending ID across pages. */
+	public function test_search_orders_timestamp_ties_by_descending_id(): void {
+		$oldest = $this->insert_log( '2026-08-02 09:00:00', 'success' );
+		$middle = $this->insert_log( '2026-08-02 09:00:00', 'success' );
+		$newest = $this->insert_log( '2026-08-02 09:00:00', 'success' );
+
+		self::assertSame(
+			array( $newest, $middle ),
+			$this->ids( $this->repository->search( array(), 1, 2 ) )
+		);
+		self::assertSame(
+			array( $oldest ),
+			$this->ids( $this->repository->search( array(), 2, 2 ) )
+		);
 	}
 
 	/** Retention uses a strict boundary and reports database failures safely. */
@@ -289,7 +352,9 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 
 	/** Return the four persisted counters. */
 	private function counters( array $row ): array {
-		return array_values( array_intersect_key( $row, array_flip( array( 'titoli_added', 'titoli_updated', 'eventi_added', 'eventi_updated' ) ) ) );
+		$names = array( 'titoli_added', 'titoli_updated', 'eventi_added', 'eventi_updated' );
+
+		return array_values( array_intersect_key( $row, array_flip( $names ) ) );
 	}
 
 	/** Return DTO identifiers. */

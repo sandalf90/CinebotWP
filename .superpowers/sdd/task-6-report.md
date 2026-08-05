@@ -39,6 +39,18 @@
 - Confirmed exception messages contain no SQL, database details, or credentials.
 - Confirmed no dependencies, credentials, dynamic identifiers, or out-of-scope production behavior were added.
 
+## Review Remediation
+
+- Added all four deterministic clock values consumed by the success and partial lifecycle writes.
+- Added assertions for both partial-run timestamps so every clock call is contracted.
+- Added 101 tied rows and asserted the exact newest 100 IDs returned by `recent(1000)`.
+- Added exact inclusive `from` and `to` boundary checks shared by `search()` and `count()`.
+- Added correctly shaped invalid calendar dates and asserted that both predicates are ignored.
+- Added paginated search assertions proving `started_at DESC, id DESC` tie ordering.
+- Re-scanned production and integration-test PHP for lines over 120 characters; none remain.
+- Replaced long PHPCS ignore comments with narrowly scoped disable/enable blocks.
+- Re-attempted the focused integration command after adding covering checks; Docker remained unavailable.
+
 ## Concern
 
 - PHPUnit, WPCS, PHPStan, and build results are unavailable until Docker Desktop is running; no executable pass is claimed.
