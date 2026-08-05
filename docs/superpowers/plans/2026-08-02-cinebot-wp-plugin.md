@@ -920,6 +920,7 @@ rtk git commit -m "feat: persist cinebot schedule hierarchy"
 - `latest(): ?SyncLog`
 - `recent(int $limit = 5): array`
 - `search(array $filters, int $page, int $perPage): array`
+- `count(array $filters = array()): int`
 - `deleteOlderThan(DateTimeImmutable $cutoff): int`
 
 - [ ] **Step 1: Write failing log lifecycle tests**
