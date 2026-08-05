@@ -116,9 +116,9 @@ final class LocaleRepository {
 	 * @throws InvalidArgumentException When required API identity data is invalid.
 	 */
 	public function upsertApi( array $data ): int {
-		$remote_id = isset( $data['localeId'] ) ? (int) $data['localeId'] : 0;
+		$remote_id = $this->api_remote_id( $data['localeId'] ?? null );
 		$name      = isset( $data['locale'] ) ? trim( sanitize_text_field( (string) $data['locale'] ) ) : '';
-		if ( $remote_id <= 0 || '' === $name ) {
+		if ( null === $remote_id || '' === $name ) {
 			throw new InvalidArgumentException( esc_html__( 'An API venue requires a positive localeId and a non-empty locale name.', 'cinebot-wp' ) );
 		}
 
@@ -233,6 +233,33 @@ final class LocaleRepository {
 		}
 
 		return sanitize_text_field( (string) $data[ $key ] );
+	}
+
+	/**
+	 * Validate a native integer or an all-digit integer string without lossy coercion.
+	 *
+	 * @param mixed $value Raw API identity.
+	 */
+	private function api_remote_id( $value ): ?int {
+		if ( is_int( $value ) ) {
+			return $value > 0 ? $value : null;
+		}
+
+		if ( ! is_string( $value ) || 1 !== preg_match( '/^[0-9]+$/D', $value ) ) {
+			return null;
+		}
+
+		$digits  = ltrim( $value, '0' );
+		$maximum = (string) PHP_INT_MAX;
+		if ( '' === $digits || strlen( $digits ) > strlen( $maximum ) ) {
+			return null;
+		}
+
+		if ( strlen( $digits ) === strlen( $maximum ) && strcmp( $digits, $maximum ) > 0 ) {
+			return null;
+		}
+
+		return (int) $digits;
 	}
 
 	/**

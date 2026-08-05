@@ -112,6 +112,18 @@ final class TipologiaRepositoryTest extends WP_UnitTestCase {
 		self::assertNotNull( $stored->createdAt );
 		self::assertSame( $stored->createdAt, $stored->updatedAt );
 
+		$old_updated_at = '2000-01-01 00:00:00';
+		self::$db->update(
+			self::$db->prefix . 'cinebot_tipologie_eventi',
+			array( 'updated_at' => $old_updated_at ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		$stored = $this->repository->findByCode( 'CUSTOM' );
+		self::assertInstanceOf( TipologiaEvento::class, $stored );
+		self::assertSame( $old_updated_at, $stored->updatedAt );
+
 		$created_at          = $stored->createdAt;
 		$stored->descrizione = 'Updated custom type';
 		self::assertSame( $id, $this->repository->save( $stored ) );
@@ -119,6 +131,7 @@ final class TipologiaRepositoryTest extends WP_UnitTestCase {
 		self::assertInstanceOf( TipologiaEvento::class, $updated );
 		self::assertSame( 'Updated custom type', $updated->descrizione );
 		self::assertSame( $created_at, $updated->createdAt );
+		self::assertNotSame( $old_updated_at, $updated->updatedAt );
 
 		$this->repository->setActive( $id, false );
 		$disabled = $this->repository->findByCode( 'CUSTOM' );

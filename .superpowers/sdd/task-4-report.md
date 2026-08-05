@@ -93,3 +93,41 @@ Rationalizations rejected: runtime gates were not marked passing merely because 
 ## Concerns
 
 The focused integration suite, WPCS, PHPStan, full PHPUnit suite, and distribution build have not executed in this environment. They must run in CI or after Docker Desktop's Linux engine becomes available.
+
+## Review Fix Report
+
+Applied every finding from `.superpowers/sdd/task-4-review.md` in a follow-up fix:
+
+- `LocaleRepository::upsertApi()` now validates the original `localeId` before casting. It accepts a positive native integer or an all-digit positive string that fits in the platform integer range. It rejects floats, booleans, signs, decimal/alphanumeric/whitespace strings, zero values, and overflowing digit strings.
+- The API payload provider now covers malformed positive-coercible values including `1.9`, `true`, `'+1'`, `'1.0'`, `'1junk'`, and `' 1 '`, plus string zero and overflow. A separate test documents intentional support for a positive all-digit string with leading zeroes.
+- The manual ownership test snapshots the complete persisted DTO/database-shaped array before `upsertApi()` and compares it exactly afterward, including IDs, all venue fields, source, and timestamps.
+- Both repository lifecycle tests set `updated_at` to `2000-01-01 00:00:00` directly, reload the DTO, perform the update, and assert that `created_at` is unchanged while `updated_at` no longer equals the old fixture.
+
+Review-fix TDD and verification commands:
+
+```text
+docker compose run --rm php composer test:integration -- --filter "TipologiaRepositoryTest|LocaleRepositoryTest"
+```
+
+RED and GREEN attempts both stopped before PHPUnit because Docker Desktop's Linux engine pipe remains unavailable. The GREEN failure was:
+
+```text
+unable to get image 'mysql:8.0': failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
+```
+
+```text
+docker compose run --rm php composer check
+```
+
+The full gate stopped before Composer for the same environment reason.
+
+Static review-fix results:
+
+- `docker compose config --quiet`: PASS (exit 0).
+- `git diff --check`: PASS; only line-ending warnings were emitted, including pre-existing unstaged state-file warnings.
+- Strict identity review: PASS; validation branches on the original type, the digit regex is anchored, zero-only strings are rejected, and length/lexical comparison prevents integer overflow before the final cast.
+- Timestamp review: PASS; direct fixtures make refresh assertions independent of wall-clock resolution, while complete DTO reloads prove creation timestamps remain unchanged.
+- Ownership review: PASS; the full `Locale::toArray()` state is compared before and after API upsert.
+- Scope review: PASS; only `LocaleRepository`, the two Task 4 integration tests, and this report are part of the fix.
+
+Residual concern remains unchanged: executable PHPUnit, WPCS, PHPStan, and distribution-build evidence requires a working Docker Linux engine or host PHP runtime.

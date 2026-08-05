@@ -78,6 +78,18 @@ final class LocaleRepositoryTest extends WP_UnitTestCase {
 		self::assertSame( $stored->createdAt, $stored->updatedAt );
 		self::assertNull( $this->repository->find( PHP_INT_MAX ) );
 
+		$old_updated_at = '2000-01-01 00:00:00';
+		self::$db->update(
+			self::$db->prefix . 'cinebot_locali',
+			array( 'updated_at' => $old_updated_at ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		$stored = $this->repository->find( $id );
+		self::assertInstanceOf( Locale::class, $stored );
+		self::assertSame( $old_updated_at, $stored->updatedAt );
+
 		$created_at       = $stored->createdAt;
 		$stored->nome     = 'Cinema Centro Nuovo';
 		$stored->source   = 'manual';
@@ -86,6 +98,7 @@ final class LocaleRepositoryTest extends WP_UnitTestCase {
 		self::assertInstanceOf( Locale::class, $updated );
 		self::assertSame( 'Cinema Centro Nuovo', $updated->nome );
 		self::assertSame( $created_at, $updated->createdAt );
+		self::assertNotSame( $old_updated_at, $updated->updatedAt );
 	}
 
 	/**
@@ -141,7 +154,14 @@ final class LocaleRepositoryTest extends WP_UnitTestCase {
 	public function test_upsert_api_returns_manual_match_unchanged(): void {
 		$manual                 = $this->manual_locale( 'Manual owner', 'Torino', 'TO' );
 		$manual->localeIdRemoto = 777;
+		$manual->codice         = 'MANUAL-777';
+		$manual->indirizzo      = 'Via Manuale 7';
+		$manual->cap            = '10100';
+		$manual->mappa          = 77;
 		$id                     = $this->repository->save( $manual );
+		$before                 = $this->repository->findByRemoteId( 777 );
+		self::assertInstanceOf( Locale::class, $before );
+		$before_state = $before->toArray();
 
 		self::assertSame(
 			$id,
@@ -156,8 +176,23 @@ final class LocaleRepositoryTest extends WP_UnitTestCase {
 		);
 		$stored = $this->repository->findByRemoteId( 777 );
 		self::assertInstanceOf( Locale::class, $stored );
-		self::assertSame( 'Manual owner', $stored->nome );
-		self::assertSame( 'manual', $stored->source );
+		self::assertSame( $before_state, $stored->toArray() );
+	}
+
+	/**
+	 * API upsert accepts an all-digit positive string identity without coercing malformed values.
+	 */
+	public function test_upsert_api_accepts_positive_all_digit_string_id(): void {
+		$id = $this->repository->upsertApi(
+			array(
+				'localeId' => '00902',
+				'locale'   => 'String identity venue',
+			)
+		);
+
+		$stored = $this->repository->findByRemoteId( 902 );
+		self::assertInstanceOf( Locale::class, $stored );
+		self::assertSame( $id, $stored->id );
 	}
 
 	/**
@@ -182,6 +217,16 @@ final class LocaleRepositoryTest extends WP_UnitTestCase {
 			'missing remote ID' => array( array( 'locale' => 'Venue' ) ),
 			'zero remote ID'    => array( array( 'localeId' => 0, 'locale' => 'Venue' ) ),
 			'negative ID'       => array( array( 'localeId' => -1, 'locale' => 'Venue' ) ),
+			'float ID'          => array( array( 'localeId' => 1.9, 'locale' => 'Venue' ) ),
+			'true ID'           => array( array( 'localeId' => true, 'locale' => 'Venue' ) ),
+			'false ID'          => array( array( 'localeId' => false, 'locale' => 'Venue' ) ),
+			'signed string ID'  => array( array( 'localeId' => '+1', 'locale' => 'Venue' ) ),
+			'minus string ID'   => array( array( 'localeId' => '-1', 'locale' => 'Venue' ) ),
+			'decimal string ID' => array( array( 'localeId' => '1.0', 'locale' => 'Venue' ) ),
+			'alphanumeric ID'   => array( array( 'localeId' => '1junk', 'locale' => 'Venue' ) ),
+			'whitespace ID'     => array( array( 'localeId' => ' 1 ', 'locale' => 'Venue' ) ),
+			'zero string ID'    => array( array( 'localeId' => '000', 'locale' => 'Venue' ) ),
+			'overflowing ID'    => array( array( 'localeId' => '999999999999999999999999', 'locale' => 'Venue' ) ),
 			'missing name'      => array( array( 'localeId' => 1 ) ),
 			'blank name'        => array( array( 'localeId' => 1, 'locale' => '   ' ) ),
 		);
