@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset name="Cinebot WP">
+    <description>Cinebot WP coding standards.</description>
+    <file>cinebot-wp.php</file>
+    <file>includes</file>
+    <file>templates</file>
+    <file>tests</file>
+    <file>uninstall.php</file>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/dist/*</exclude-pattern>
+    <arg value="ps"/>
+    <config name="minimum_supported_wp_version" value="6.0"/>
+    <rule ref="WordPress"/>
+</ruleset>

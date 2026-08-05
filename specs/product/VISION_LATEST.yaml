@@ -1,0 +1,6 @@
+project: cinebot-wp
+vision: Provide a reliable WordPress-native bridge between Cinebot programming data, editorial administration, and public event discovery.
+success:
+  - Synchronization is idempotent, atomic, observable, and respects manual ownership.
+  - Administrators can manage the complete schedule hierarchy.
+  - Visitors can browse current state-3 events through accessible shortcodes.

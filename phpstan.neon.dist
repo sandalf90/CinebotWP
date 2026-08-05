@@ -1,0 +1,14 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 6
+    phpVersion: 70400
+    paths:
+        - cinebot-wp.php
+        - includes
+        - templates
+        - uninstall.php
+    excludePaths:
+        - vendor
+        - dist

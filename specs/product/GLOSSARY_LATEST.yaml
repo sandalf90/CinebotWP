@@ -1,0 +1,10 @@
+terms:
+  Titolo: A show or production containing one or more scheduled events.
+  Evento: A dated occurrence of a title at a venue.
+  Settore: A seating or admission area belonging to an event.
+  Prezzo: A price option belonging to a sector.
+  Locale: The venue where an event occurs.
+  TipologiaEvento: A coded event category from the official list or a custom administrator entry.
+  Programmazione: The Cinebot frontend envelope containing titles and their nested schedule.
+  ManualOwnership: A row with source manual that synchronization must never modify.
+  Reconciliation: Marking missing API rows inactive and reactivating them when they return.

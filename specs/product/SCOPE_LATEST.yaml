@@ -1,0 +1,13 @@
+project: cinebot-wp
+in_scope:
+  - Cinebot BASIC AUTH configuration and scheduled read-only synchronization
+  - Custom-table CRUD for titles, events, sectors, prices, venues, and event types
+  - Reconciliation that deactivates missing API rows and reactivates returning rows
+  - Dashboard and synchronization history
+  - Public schedule and title shortcodes with AJAX filters and card layout
+  - WordPress single-site support
+out_of_scope:
+  - WordPress Multisite and network activation
+  - Writing data back to the Cinebot API
+  - React, Gutenberg blocks, calendar layout, and purchase links
+  - Automatic API retry and circuit breaker
