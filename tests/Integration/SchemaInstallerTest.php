@@ -1,0 +1,276 @@
+<?php
+/**
+ * Database schema integration tests.
+ *
+ * @package CinebotWp
+ */
+
+namespace CinebotWp\Tests\Integration;
+
+// Integration assertions query trusted, fixed schema identifiers directly.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+use CinebotWp\Database\EventTypeDefaults;
+use CinebotWp\Database\SchemaInstaller;
+use CinebotWp\Plugin;
+use RuntimeException;
+use WP_UnitTestCase;
+use wpdb;
+
+/**
+ * Verifies schema installation and plugin lifecycle behavior.
+ */
+final class SchemaInstallerTest extends WP_UnitTestCase {
+	/** @var wpdb */
+	private static $db;
+
+	/** @var string[] */
+	private const TABLE_SUFFIXES = array(
+		'titoli',
+		'eventi',
+		'settori',
+		'prezzi',
+		'locali',
+		'tipologie_eventi',
+		'sync_log',
+	);
+
+	/**
+	 * Store the WordPress database connection.
+	 */
+	public static function set_up_before_class(): void {
+		parent::set_up_before_class();
+
+		global $wpdb;
+		self::$db = $wpdb;
+	}
+
+	/**
+	 * Remove plugin data before each test.
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		$this->drop_plugin_tables();
+		delete_option( 'cinebot_wp_db_version' );
+		wp_clear_scheduled_hook( 'cinebot_wp_sync_event' );
+	}
+
+	/**
+	 * Remove plugin data after each test.
+	 */
+	public function tear_down(): void {
+		$this->drop_plugin_tables();
+		delete_option( 'cinebot_wp_db_version' );
+		wp_clear_scheduled_hook( 'cinebot_wp_sync_event' );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Verifies all approved tables, fields, indexes, and defaults.
+	 */
+	public function test_install_creates_approved_schema_and_defaults(): void {
+		( new SchemaInstaller( self::$db ) )->install();
+		$expected_tables = array_map(
+			static function ( string $suffix ): string {
+				return self::$db->prefix . 'cinebot_' . $suffix;
+			},
+			self::TABLE_SUFFIXES
+		);
+		$actual_tables   = self::$db->get_col(
+			self::$db->prepare(
+				'SHOW TABLES LIKE %s',
+				self::$db->esc_like( self::$db->prefix . 'cinebot_' ) . '%'
+			)
+		);
+		sort( $expected_tables );
+		sort( $actual_tables );
+		self::assertSame( $expected_tables, $actual_tables );
+
+		foreach ( self::TABLE_SUFFIXES as $suffix ) {
+			$table = self::$db->prefix . 'cinebot_' . $suffix;
+			self::assertSame(
+				$table,
+				self::$db->get_var( self::$db->prepare( 'SHOW TABLES LIKE %s', self::$db->esc_like( $table ) ) )
+			);
+			self::assertSame( 'InnoDB', $this->table_engine( $table ) );
+		}
+
+		self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
+		self::assertArrayNotHasKey( 'cinebot_wp_db_version', wp_load_alloptions() );
+		self::assertCount( 62, EventTypeDefaults::all() );
+		self::assertCount( 62, array_unique( array_column( EventTypeDefaults::all(), 'codice' ) ) );
+		self::assertSame( '01', EventTypeDefaults::all()[0]['codice'] );
+		self::assertSame(
+			62,
+			(int) self::$db->get_var( 'SELECT COUNT(*) FROM ' . self::$db->prefix . 'cinebot_tipologie_eventi' )
+		);
+
+		$this->assert_nullable_column( 'titoli', 'idtitolo' );
+		$this->assert_nullable_column( 'titoli', 'frontend_id' );
+		$this->assert_nullable_column( 'eventi', 'idevento' );
+		$this->assert_nullable_column( 'settori', 'idsettore' );
+		$this->assert_nullable_column( 'prezzi', 'idprezzo' );
+		$this->assert_nullable_column( 'locali', 'locale_id_remoto' );
+
+		$this->assert_index( 'titoli', 'idtitolo', array( 'idtitolo' ), true );
+		$this->assert_index( 'titoli', 'frontend_sync', array( 'frontend_id', 'sync_active', 'last_seen_sync' ) );
+		$this->assert_index( 'eventi', 'idevento', array( 'idevento' ), true );
+		$this->assert_index( 'eventi', 'inizio', array( 'inizio' ) );
+		$this->assert_index( 'eventi', 'titolo_sync', array( 'titolo_id', 'sync_active', 'last_seen_sync' ) );
+		$this->assert_index( 'settori', 'remote_evento', array( 'idsettore', 'evento_id' ), true );
+		$this->assert_index( 'settori', 'evento_sync', array( 'evento_id', 'sync_active', 'last_seen_sync' ) );
+		$this->assert_index( 'prezzi', 'remote_settore', array( 'idprezzo', 'settore_id' ), true );
+		$this->assert_index( 'prezzi', 'settore_sync', array( 'settore_id', 'sync_active', 'last_seen_sync' ) );
+		$this->assert_index( 'locali', 'locale_id_remoto', array( 'locale_id_remoto' ), true );
+
+		foreach ( array( 'titoli', 'eventi', 'settori', 'prezzi' ) as $suffix ) {
+			$this->assert_column_exists( $suffix, 'sync_active' );
+			$this->assert_nullable_column( $suffix, 'last_seen_sync' );
+		}
+	}
+
+	/**
+	 * Verifies repeated activation preserves existing event-type choices.
+	 */
+	public function test_install_is_idempotent_and_preserves_disabled_defaults(): void {
+		$installer = new SchemaInstaller( self::$db );
+		$installer->install();
+
+		$table = self::$db->prefix . 'cinebot_tipologie_eventi';
+		self::$db->update( $table, array( 'attivo' => 0 ), array( 'codice' => '01' ), array( '%d' ), array( '%s' ) );
+		$installer->install();
+
+		self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+		self::assertSame(
+			'0',
+			self::$db->get_var( self::$db->prepare( "SELECT attivo FROM {$table} WHERE codice = %s", '01' ) )
+		);
+	}
+
+	/**
+	 * Verifies lifecycle hooks use only the plugin coordinator callbacks.
+	 */
+	public function test_entry_point_registers_plugin_lifecycle_callbacks(): void {
+		$activation_hook   = 'activate_' . plugin_basename( CINEBOT_WP_FILE );
+		$deactivation_hook = 'deactivate_' . plugin_basename( CINEBOT_WP_FILE );
+
+		self::assertSame( 10, has_action( $activation_hook, array( Plugin::class, 'activate' ) ) );
+		self::assertSame( 10, has_action( $deactivation_hook, array( Plugin::class, 'deactivate' ) ) );
+	}
+
+	/**
+	 * Verifies deactivation clears cron without deleting persisted data.
+	 */
+	public function test_deactivation_retains_schema_and_data(): void {
+		Plugin::activate();
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, 'cinebot_wp_sync_event' );
+
+		Plugin::deactivate();
+
+		self::assertFalse( wp_next_scheduled( 'cinebot_wp_sync_event' ) );
+		self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
+		self::assertSame(
+			self::$db->prefix . 'cinebot_titoli',
+			self::$db->get_var(
+				self::$db->prepare(
+					'SHOW TABLES LIKE %s',
+					self::$db->esc_like( self::$db->prefix . 'cinebot_titoli' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Verifies unsupported storage engines abort before schema statements.
+	 */
+	public function test_install_fails_before_creation_without_innodb(): void {
+		$db = new class() extends wpdb {
+			/** @var string[] */
+			public $queries = array();
+
+			public function __construct() {
+				$this->prefix = 'wp_';
+			}
+
+			public function get_results( $query = null, $output = OBJECT ) {
+				$this->queries[] = $query;
+
+				return array( array( 'Engine' => 'MyISAM', 'Support' => 'DEFAULT' ) );
+			}
+
+			public function query( $query ) {
+				$this->queries[] = $query;
+
+				return false;
+			}
+		};
+
+		$installer = new SchemaInstaller( $db );
+		self::assertFalse( $installer->supportsTransactions() );
+
+		try {
+			$installer->install();
+			self::fail( 'Installation should fail when InnoDB is unavailable.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertStringContainsString( 'InnoDB', $exception->getMessage() );
+		}
+
+		self::assertCount( 2, $db->queries );
+		self::assertSame( array( 'SHOW ENGINES', 'SHOW ENGINES' ), $db->queries );
+	}
+
+	/**
+	 * Drop all fixed plugin tables.
+	 */
+	private function drop_plugin_tables(): void {
+		foreach ( array_reverse( self::TABLE_SUFFIXES ) as $suffix ) {
+			self::$db->query( 'DROP TABLE IF EXISTS ' . self::$db->prefix . 'cinebot_' . $suffix );
+		}
+	}
+
+	/**
+	 * Return a table storage engine.
+	 */
+	private function table_engine( string $table ): string {
+		$status = self::$db->get_row( self::$db->prepare( 'SHOW TABLE STATUS LIKE %s', $table ) );
+		self::assertIsObject( $status );
+
+		return $status->Engine;
+	}
+
+	/**
+	 * Assert that a column exists.
+	 */
+	private function assert_column_exists( string $suffix, string $column ): void {
+		$table = self::$db->prefix . 'cinebot_' . $suffix;
+		self::assertSame( $column, self::$db->get_var( self::$db->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ) ) );
+	}
+
+	/**
+	 * Assert that a column permits NULL.
+	 */
+	private function assert_nullable_column( string $suffix, string $column ): void {
+		$table  = self::$db->prefix . 'cinebot_' . $suffix;
+		$result = self::$db->get_row( self::$db->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ) );
+		self::assertIsObject( $result );
+		self::assertSame( 'YES', $result->Null );
+	}
+
+	/**
+	 * Assert an index's ordered columns and uniqueness.
+	 *
+	 * @param string[] $columns Expected ordered columns.
+	 */
+	private function assert_index( string $suffix, string $name, array $columns, bool $unique = false ): void {
+		$table = self::$db->prefix . 'cinebot_' . $suffix;
+		$rows  = self::$db->get_results( self::$db->prepare( "SHOW INDEX FROM {$table} WHERE Key_name = %s", $name ) );
+
+		self::assertCount( count( $columns ), $rows );
+		self::assertSame( $columns, array_column( $rows, 'Column_name' ) );
+		self::assertSame( $unique ? '0' : '1', (string) $rows[0]->Non_unique );
+	}
+}
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared

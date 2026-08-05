@@ -6,6 +6,7 @@ parameters:
     phpVersion: 70400
     paths:
         - cinebot-wp.php
+        - uninstall.php
         - includes
     excludePaths:
         - vendor

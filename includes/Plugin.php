@@ -7,6 +7,8 @@
 
 namespace CinebotWp;
 
+use CinebotWp\Database\SchemaInstaller;
+
 final class Plugin {
 	/**
 	 * Singleton instance.
@@ -31,6 +33,22 @@ final class Plugin {
 		}
 
 		return self::$instance;
+	}
+
+	/**
+	 * Install the plugin database schema on activation.
+	 */
+	public static function activate(): void {
+		global $wpdb;
+
+		( new SchemaInstaller( $wpdb ) )->install();
+	}
+
+	/**
+	 * Stop scheduled synchronization on deactivation.
+	 */
+	public static function deactivate(): void {
+		wp_clear_scheduled_hook( 'cinebot_wp_sync_event' );
 	}
 
 	/**
