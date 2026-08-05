@@ -233,6 +233,30 @@ final class SchemaInstaller {
 			return;
 		}
 
+		// Catalog seeding must remain retryable after any partial database failure.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		try {
+			if ( false === $this->db->query( 'START TRANSACTION' ) ) {
+				throw new RuntimeException( 'seed transaction failed' );
+			}
+
+			$this->insert_event_type_defaults( $table );
+			if ( false === $this->db->query( 'COMMIT' ) ) {
+				throw new RuntimeException( 'seed commit failed' );
+			}
+		} catch ( \Throwable $exception ) {
+			$this->rollback_event_type_seed();
+			throw new RuntimeException( esc_html__( 'Cinebot WP could not store its default event types.', 'cinebot-wp' ) );
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	/**
+	 * Insert every default within the caller's transaction.
+	 *
+	 * @throws RuntimeException When an insert fails.
+	 */
+	private function insert_event_type_defaults( string $table ): void {
 		$now = current_time( 'mysql', true );
 		foreach ( EventTypeDefaults::all() as $event_type ) {
 			// wpdb::insert prepares every dynamic value using the supplied formats.
@@ -251,8 +275,20 @@ final class SchemaInstaller {
 			);
 
 			if ( false === $inserted ) {
-				throw new RuntimeException( esc_html__( 'Cinebot WP could not store its default event types.', 'cinebot-wp' ) );
+				throw new RuntimeException( 'seed insert failed' );
 			}
+		}
+	}
+
+	/**
+	 * Attempt rollback without replacing the safe installation exception.
+	 */
+	private function rollback_event_type_seed(): void {
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$this->db->query( 'ROLLBACK' );
+		} catch ( \Throwable $exception ) {
+			return;
 		}
 	}
 }

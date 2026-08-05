@@ -606,8 +606,10 @@ rtk git commit -m "chore: bootstrap cinebot wordpress plugin"
 - Create: `includes/Database/EventTypeDefaults.php`
 - Create: `uninstall.php`
 - Create: `tests/Integration/SchemaInstallerTest.php`
+- Create: `tests/Integration/UninstallTest.php`
 - Modify: `cinebot-wp.php`
 - Modify: `includes/Plugin.php`
+- Modify: `phpstan.neon.dist`
 
 **Interfaces:**
 - Produces: `SchemaInstaller::__construct(\wpdb $db)`, `install(): void`, `supportsTransactions(): bool`.
@@ -628,7 +630,7 @@ self::assertSame('1.0.0', get_option('cinebot_wp_db_version'));
 self::assertCount(62, EventTypeDefaults::all());
 ```
 
-Also assert nullable remote IDs, the composite unique indexes for sectors/prices, an index on `eventi.inizio`, `ENGINE=InnoDB` on every plugin table, and reconciliation columns `sync_active`/`last_seen_sync` on titles, events, sectors, and prices.
+Also assert nullable remote IDs, the composite unique indexes for sectors/prices, an index on `eventi.inizio`, `ENGINE=InnoDB` on every plugin table, and reconciliation columns `sync_active`/`last_seen_sync` on titles, events, sectors, and prices. Protect the complete ordered default catalog with count, code uniqueness, and a canonical SHA-256 fingerprint of UTF-8 `codice<TAB>descrizione` rows joined by LF without a trailing LF. Add a secondary `wpdb` test double that fails after earlier default inserts and prove rollback leaves zero rows before a successful 62-row retry.
 
 - [ ] **Step 2: Run and observe failure**
 
@@ -646,7 +648,7 @@ Create the seven tables exactly as approved in the design. Important implementat
 - Use `bigint(20) unsigned` IDs, `decimal(10,2)` money values, and WordPress charset/collation.
 - `tipologie_eventi.codice` is `varchar(10)` and unique, preserving leading zeroes.
 - Store DB version in `cinebot_wp_db_version` with autoload disabled.
-- Seed the complete defaults list only when `cinebot_tipologie_eventi` is empty, exactly as approved. Subsequent activations leave existing rows and their `attivo` state unchanged.
+- Seed the complete defaults list only when `cinebot_tipologie_eventi` is empty, exactly as approved. Wrap all default inserts in an explicit InnoDB `START TRANSACTION`/`COMMIT`, issue `ROLLBACK` on any insert or commit failure, and throw a translated safe `RuntimeException` so retry sees an empty table. Subsequent activations leave existing rows and their `attivo` state unchanged.
 - Append `ENGINE=InnoDB` to every `dbDelta()` statement. Before creating tables, `supportsTransactions()` checks that InnoDB appears in `SHOW ENGINES` with support `YES` or `DEFAULT`; otherwise activation throws a translated `RuntimeException` and creates no tables.
 - Add nullable `frontend_id bigint(20) unsigned` to `titoli` so reconciliation is scoped to each returned programmazione envelope. Add `sync_active tinyint(1) unsigned NOT NULL DEFAULT 1` and nullable `last_seen_sync char(36)` to `titoli`, `eventi`, `settori`, and `prezzi`; index `sync_active`, and index `last_seen_sync` together with `frontend_id` or the parent key used during reconciliation.
 
@@ -656,7 +658,7 @@ Create the seven tables exactly as approved in the design. Important implementat
 
 In `cinebot-wp.php`, register only `[Plugin::class, 'activate']` and `[Plugin::class, 'deactivate']`. `Plugin::activate()` constructs `SchemaInstaller` with global `$wpdb` and calls `install()`. `Plugin::deactivate()` only clears `cinebot_wp_sync_event`; it must not delete data. No other class is registered as a lifecycle callback.
 
-Implement `uninstall.php` to verify `WP_UNINSTALL_PLUGIN`, drop the seven tables, delete `cinebot_wp_settings`, `cinebot_wp_db_version`, `cinebot_wp_encryption_salt`, `cinebot_wp_sync_lock`, clear scheduled hooks, and delete `_transient_cinebot_prog_%` plus matching timeout rows. This single-site-only cleanup is documented; no network/site loop is added.
+Implement `uninstall.php` to verify `WP_UNINSTALL_PLUGIN`, drop the seven tables, delete `cinebot_wp_settings`, `cinebot_wp_db_version`, `cinebot_wp_encryption_salt`, `cinebot_wp_sync_lock`, clear scheduled hooks, and delete `_transient_cinebot_prog_%` plus matching timeout rows. This single-site-only cleanup is documented; no network/site loop is added. Cover the destructive boundary with an integration test that creates all seven tables and approved/unrelated options, cron hooks, and transients; execute guarded uninstall, assert only approved data is removed, and restore schema in `finally`.
 
 When `uninstall.php` is created, add it to `parameters.paths` in `phpstan.neon.dist`; Task 1 intentionally lists only paths that exist at that foundation stage.
 
@@ -664,6 +666,7 @@ When `uninstall.php` is created, add it to `parameters.paths` in `phpstan.neon.d
 
 ```powershell
 rtk docker compose run --rm php composer test:integration -- --filter SchemaInstallerTest
+rtk docker compose run --rm php composer test:integration -- --filter UninstallTest
 rtk docker compose run --rm php composer check
 ```
 
@@ -672,7 +675,7 @@ Expected: schema tests and full suite pass.
 - [ ] **Step 6: Commit schema lifecycle**
 
 ```powershell
-rtk git add includes/Database cinebot-wp.php includes/Plugin.php uninstall.php tests/Integration/SchemaInstallerTest.php
+rtk git add includes/Database cinebot-wp.php includes/Plugin.php uninstall.php tests/Integration/SchemaInstallerTest.php tests/Integration/UninstallTest.php phpstan.neon.dist
 rtk git commit -m "feat: install cinebot database schema"
 ```
 

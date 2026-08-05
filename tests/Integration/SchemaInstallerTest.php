@@ -99,9 +99,6 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 
 		self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
 		self::assertArrayNotHasKey( 'cinebot_wp_db_version', wp_load_alloptions() );
-		self::assertCount( 62, EventTypeDefaults::all() );
-		self::assertCount( 62, array_unique( array_column( EventTypeDefaults::all(), 'codice' ) ) );
-		self::assertSame( '01', EventTypeDefaults::all()[0]['codice'] );
 		self::assertSame(
 			62,
 			(int) self::$db->get_var( 'SELECT COUNT(*) FROM ' . self::$db->prefix . 'cinebot_tipologie_eventi' )
@@ -132,6 +129,20 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Verifies every approved default code and description through a canonical fingerprint.
+	 */
+	public function test_defaults_match_approved_catalog(): void {
+		$defaults = EventTypeDefaults::all();
+
+		self::assertCount( 62, $defaults );
+		self::assertCount( 62, array_unique( array_column( $defaults, 'codice' ) ) );
+		self::assertSame(
+			'26e7c32546f10b24f2260373b2d65c06dbf94d44d84c66963c69ce7d0d4ef380',
+			$this->event_type_fingerprint( $defaults )
+		);
+	}
+
+	/**
 	 * Verifies repeated activation preserves existing event-type choices.
 	 */
 	public function test_install_is_idempotent_and_preserves_disabled_defaults(): void {
@@ -147,6 +158,70 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 			'0',
 			self::$db->get_var( self::$db->prepare( "SELECT attivo FROM {$table} WHERE codice = %s", '01' ) )
 		);
+	}
+
+	/**
+	 * Verifies a failed partial seed rolls back and can be retried completely.
+	 */
+	public function test_mid_seed_failure_rolls_back_and_retry_seeds_all_defaults(): void {
+		$db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			/** @var bool */
+			public $failed = false;
+
+			/** @var string[] */
+			public $transaction_queries = array();
+
+			/** @var int */
+			private $insert_count = 0;
+
+			public function insert( $table, $data, $format = null ) {
+				++$this->insert_count;
+				if ( ! $this->failed && 5 === $this->insert_count ) {
+					$this->failed = true;
+
+					return false;
+				}
+
+				return parent::insert( $table, $data, $format );
+			}
+
+			public function query( $query ) {
+				$normalized = strtoupper( trim( $query ) );
+				if ( in_array( $normalized, array( 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true ) ) {
+					$this->transaction_queries[] = $normalized;
+				}
+
+				return parent::query( $query );
+			}
+		};
+		$db->set_prefix( self::$db->prefix );
+		$installer = new SchemaInstaller( $db );
+		$table     = self::$db->prefix . 'cinebot_tipologie_eventi';
+
+		try {
+			try {
+				$installer->install();
+				self::fail( 'A forced mid-seed insert failure should abort installation.' );
+			} catch ( RuntimeException $exception ) {
+				self::assertSame(
+					esc_html__( 'Cinebot WP could not store its default event types.', 'cinebot-wp' ),
+					$exception->getMessage()
+				);
+			}
+
+			self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
+
+			$installer->install();
+
+			self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame(
+				array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
+				$db->transaction_queries
+			);
+		} finally {
+			$db->close();
+		}
 	}
 
 	/**
@@ -228,6 +303,22 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		foreach ( array_reverse( self::TABLE_SUFFIXES ) as $suffix ) {
 			self::$db->query( 'DROP TABLE IF EXISTS ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
+	}
+
+	/**
+	 * Hash UTF-8 `code<TAB>description` rows joined by LF with no trailing LF.
+	 *
+	 * @param array<int,array{codice:string,descrizione:string}> $defaults Event type catalog.
+	 */
+	private function event_type_fingerprint( array $defaults ): string {
+		$rows = array_map(
+			static function ( array $event_type ): string {
+				return $event_type['codice'] . "\t" . $event_type['descrizione'];
+			},
+			$defaults
+		);
+
+		return hash( 'sha256', implode( "\n", $rows ) );
 	}
 
 	/**

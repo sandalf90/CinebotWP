@@ -99,3 +99,59 @@ Hash: the commit containing this report is referenced as `HEAD`; its immutable h
 ## Concerns
 
 - PHPUnit, WPCS, PHPStan, build, and PHP syntax execution remain unverified until Docker Desktop or a host PHP toolchain is available.
+
+## Fix Review
+
+### Findings Addressed
+
+- Default seeding now uses explicit `START TRANSACTION`, `COMMIT`, and `ROLLBACK` statements. Any insert/commit failure or throwable rolls back before a translated safe `RuntimeException`, leaving an empty table that can be retried.
+- A secondary real `wpdb` connection fails the fifth insert after four successful inserts; the focused test asserts rollback leaves zero rows, then retries through the same installer and asserts all 62 rows plus the exact transaction sequence.
+- The complete ordered catalog is protected by count, unique-code count, and SHA-256 `26e7c32546f10b24f2260373b2d65c06dbf94d44d84c66963c69ce7d0d4ef380`. The canonical input is UTF-8 `codice<TAB>descrizione` rows in array order joined by LF without a trailing LF.
+- `UninstallTest` creates the seven plugin tables and unrelated table, approved/unrelated options, approved/unrelated cron hooks, and approved/unrelated normal transient value/timeout options. It executes guarded uninstall, asserts the exact removal boundary, cleans fixtures, and restores schema in `finally`.
+- Task 2 plan files/tests, behavior, focused commands, and staging snippet now document the recoverable seed and uninstall contracts.
+
+### TDD And Dynamic Gates
+
+Red commands were attempted after adding the recovery and uninstall contracts and before changing production seeding:
+
+```text
+docker compose run --rm php composer test:integration -- --filter SchemaInstallerTest
+docker compose run --rm php composer test:integration -- --filter UninstallTest
+```
+
+Green/final commands were attempted after implementation:
+
+```text
+docker compose run --rm php composer test:integration -- --filter SchemaInstallerTest
+docker compose run --rm php composer test:integration -- --filter UninstallTest
+docker compose run --rm php composer check
+```
+
+Every Docker command stopped before PHPUnit/Composer with the same exact result:
+
+```text
+unable to get image 'mysql:8.0': failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: Impossibile trovare il file specificato.
+```
+
+Host syntax probe `php -v` also could not run:
+
+```text
+php : Termine 'php' non riconosciuto come nome di cmdlet, funzione, programma eseguibile o file script.
+```
+
+Dynamic PHPUnit, WPCS, PHPStan, build, and PHP syntax gates were therefore not run; they are not reported as passing.
+
+### Static Verification
+
+- Canonical catalog regeneration: `sha256=26e7c32546f10b24f2260373b2d65c06dbf94d44d84c66963c69ce7d0d4ef380`, `rows=62`, `unique_codes=62`.
+- Transaction scan: production contains explicit start, commit, rollback, and safe translated failure; the test asserts rollback/retry row counts and command order.
+- Uninstall scan: the contract covers all seven approved tables, an unrelated table, four approved and one unrelated option, approved/unrelated cron hooks, and both transient value/timeout rows.
+- Isolation scan: uninstall fixtures are cleaned and schema is restored from `finally`.
+- Plan scan: canonical fingerprint generation, atomic transaction behavior, uninstall contract, both focused commands, and the added test path are documented.
+- `docker compose config --quiet`: exit code 0.
+- `git diff --check`: no whitespace errors; only Git LF-to-CRLF working-copy warnings.
+- Secret scan: no credential, authorization-header, or token patterns found.
+
+### Remaining Concern
+
+- Runtime behavior and tool conformance require CI or another environment with Docker/PHP; local dynamic execution remains intentionally unavailable.
