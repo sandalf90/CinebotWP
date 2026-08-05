@@ -16,6 +16,9 @@ use ZipArchive;
  * Verifies the executable plugin foundation.
  */
 final class PluginBootstrapTest extends WP_UnitTestCase {
+	/**
+	 * Verifies that plugin boot is idempotent.
+	 */
 	public function test_plugin_bootstraps_once(): void {
 		$boot_count = 0;
 		$observer   = static function () use ( &$boot_count ): void {
@@ -38,6 +41,9 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 		self::assertSame( '1.0.0', CINEBOT_WP_VERSION );
 	}
 
+	/**
+	 * Verifies that runtime loading does not depend on Composer.
+	 */
 	public function test_runtime_does_not_require_composer_vendor_directory(): void {
 		self::assertFileExists( CINEBOT_WP_PATH . 'includes/autoload.php' );
 		// Direct access is appropriate for a local test fixture.
@@ -48,6 +54,9 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 		self::assertStringNotContainsString( 'vendor/autoload.php', $entry_point );
 	}
 
+	/**
+	 * Verifies that the distribution contains only runtime files.
+	 */
 	public function test_distribution_contains_only_runtime_files(): void {
 		$archive_path = CINEBOT_WP_PATH . 'dist/cinebot-wp.zip';
 

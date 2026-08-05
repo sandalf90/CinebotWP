@@ -10,5 +10,10 @@
     <exclude-pattern>*/dist/*</exclude-pattern>
     <arg value="ps"/>
     <config name="minimum_supported_wp_version" value="6.0"/>
-    <rule ref="WordPress"/>
+    <rule ref="WordPress">
+        <exclude name="WordPress.Files.FileName"/>
+    </rule>
+    <rule ref="WordPress.Files.FileName">
+        <exclude-pattern type="relative">^includes/</exclude-pattern>
+    </rule>
 </ruleset>

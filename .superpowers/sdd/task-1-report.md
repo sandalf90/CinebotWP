@@ -150,3 +150,25 @@ Observed result: Docker CLI reached Compose, but could not connect to `npipe:///
 - The new and existing dynamic tests, WPCS, PHPStan, and actual ZIP build still require execution in CI or another environment with Docker.
 - The TDD red command was issued in the correct order, but the environment stopped execution before PHPUnit could prove the expected behavioral failures.
 - The original implementation commit remains `cdc8021815d273dc0013fca07106f95ade8b0e05`; review corrections are committed separately as required.
+
+## Final WPCS Alignment Review
+
+### Corrections
+
+- Updated `phpcs.xml.dist` to exclude `WordPress.Files.FileName` from the parent `WordPress` ruleset, restore that sniff independently, and apply a relative exclusion only to `^includes/`. This preserves the required PSR-4 `includes/Plugin.php` filename while retaining the filename sniff everywhere else.
+- Added concise WPCS-compatible docblocks to all three methods in `PluginBootstrapTest`.
+- Mirrored the PHPCS ruleset and test method docblocks in the Task 1 literal plan snippets.
+
+### Static Checks
+
+| Check | Result |
+|---|---|
+| Parse `phpcs.xml.dist` and inspect its rules through PowerShell XML APIs | Passed: the parent rule excludes only `WordPress.Files.FileName`; the restored sniff has one relative `^includes/` exclusion. |
+| Check the three expected method descriptions in `PluginBootstrapTest.php` | Passed: all three docblocks found. |
+| Check the PHPCS exclusion and three method descriptions in the Task 1 plan | Passed: all mirrored literals found. |
+| Scan test PHP for lines longer than 100 characters | Passed: no matches. |
+| `git diff --check` | Passed with no whitespace errors; Git emitted only Windows LF-to-CRLF conversion warnings. |
+
+### Concerns
+
+- WPCS itself was not run because the accepted local Docker/PHP/Composer environment gap remains. CI or another equipped environment must execute the dynamic quality gate.
