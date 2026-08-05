@@ -5,11 +5,163 @@
  * @package CinebotWp
  */
 
-namespace CinebotWp\Tests\Unit;
+namespace CinebotWp\Services {
+
+	use CinebotWp\Tests\Unit\SettingsServiceFunctionControl;
+
+	// Native names are required so PHP namespace resolution supplies test doubles.
+	// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	/**
+	 * Delegate normally while allowing deterministic primitive failures.
+	 *
+	 * @param string $algorithm Hash algorithm.
+	 * @param string $data      Data to authenticate.
+	 * @param string $key       Authentication key.
+	 * @param bool   $binary    Whether to return raw bytes.
+	 * @return string|false
+	 */
+	function hash_hmac( $algorithm, $data, $key, $binary = false ) {
+		++SettingsServiceFunctionControl::$hash_calls;
+		if ( SettingsServiceFunctionControl::$hash_failure_at === SettingsServiceFunctionControl::$hash_calls ) {
+			return false;
+		}
+
+		$result = \hash_hmac( $algorithm, $data, $key, $binary );
+		if ( 0 === strpos( $data, "cinebot-wp\0" ) ) {
+			SettingsServiceFunctionControl::$derived_keys[] = $result;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Delegate encryption while allowing a primitive failure result.
+	 *
+	 * @param string $data       Plaintext.
+	 * @param string $cipher     Cipher name.
+	 * @param string $passphrase Encryption key.
+	 * @param int    $options    OpenSSL options.
+	 * @param string $iv         Initialization vector.
+	 * @return string|false
+	 */
+	function openssl_encrypt( $data, $cipher, $passphrase, $options = 0, $iv = '' ) {
+		if ( SettingsServiceFunctionControl::$encrypt_failure ) {
+			return false;
+		}
+
+		return \openssl_encrypt( $data, $cipher, $passphrase, $options, $iv );
+	}
+
+	/**
+	 * Record whether authenticated decryption was reached.
+	 *
+	 * @param string $data       Ciphertext.
+	 * @param string $cipher     Cipher name.
+	 * @param string $passphrase Encryption key.
+	 * @param int    $options    OpenSSL options.
+	 * @param string $iv         Initialization vector.
+	 * @return string|false
+	 */
+	function openssl_decrypt( $data, $cipher, $passphrase, $options = 0, $iv = '' ) {
+		++SettingsServiceFunctionControl::$decrypt_calls;
+
+		return \openssl_decrypt( $data, $cipher, $passphrase, $options, $iv );
+	}
+
+	/**
+	 * Record whether encoded input reached Base64 decoding.
+	 *
+	 * @param string $data   Encoded data.
+	 * @param bool   $strict Whether invalid characters must fail.
+	 * @return string|false
+	 */
+	function base64_decode( $data, $strict = false ) {
+		++SettingsServiceFunctionControl::$base64_decode_calls;
+
+		return \base64_decode( $data, $strict );
+	}
+
+	/**
+	 * Simulate a salt creation race while delegating normal option writes.
+	 *
+	 * @param string $option     Option name.
+	 * @param mixed  $value      Option value.
+	 * @param string $deprecated Unused legacy argument.
+	 * @param mixed  $autoload   Autoload setting.
+	 * @return bool
+	 */
+	function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' ) {
+		if ( null !== SettingsServiceFunctionControl::$race_salt && 'cinebot_wp_encryption_salt' === $option ) {
+			\add_option( $option, SettingsServiceFunctionControl::$race_salt, $deprecated, $autoload );
+
+			return false;
+		}
+
+		return \add_option( $option, $value, $deprecated, $autoload );
+	}
+
+	/**
+	 * Simulate an unavailable required primitive.
+	 *
+	 * @param string $function Function name.
+	 * @return bool
+	 */
+	function function_exists( $function ) {
+		if ( SettingsServiceFunctionControl::$unavailable_function === $function ) {
+			return false;
+		}
+
+		return \function_exists( $function );
+	}
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
+
+namespace CinebotWp\Tests\Unit {
 
 use CinebotWp\Services\SettingsService;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+
+/**
+ * Controls namespaced function doubles used by SettingsService.
+ */
+final class SettingsServiceFunctionControl {
+	/** @var string */
+	public static $unavailable_function = '';
+
+	/** @var int */
+	public static $hash_failure_at = 0;
+
+	/** @var int */
+	public static $hash_calls = 0;
+
+	/** @var int */
+	public static $decrypt_calls = 0;
+
+	/** @var bool */
+	public static $encrypt_failure = false;
+
+	/** @var int */
+	public static $base64_decode_calls = 0;
+
+	/** @var string|null */
+	public static $race_salt;
+
+	/** @var array<int,string> */
+	public static $derived_keys = array();
+
+	/** Restore normal delegation before and after each test. */
+	public static function reset(): void {
+		self::$unavailable_function = '';
+		self::$hash_failure_at       = 0;
+		self::$hash_calls            = 0;
+		self::$decrypt_calls         = 0;
+		self::$encrypt_failure       = false;
+		self::$base64_decode_calls   = 0;
+		self::$race_salt             = null;
+		self::$derived_keys          = array();
+	}
+}
 
 /**
  * Verifies settings validation and encrypted credential storage.
@@ -23,6 +175,7 @@ final class SettingsServiceTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
+		SettingsServiceFunctionControl::reset();
 		delete_option( self::SETTINGS_OPTION );
 		delete_option( self::SALT_OPTION );
 	}
@@ -33,6 +186,7 @@ final class SettingsServiceTest extends TestCase {
 	protected function tearDown(): void {
 		delete_option( self::SETTINGS_OPTION );
 		delete_option( self::SALT_OPTION );
+		SettingsServiceFunctionControl::reset();
 		parent::tearDown();
 	}
 
@@ -177,8 +331,14 @@ final class SettingsServiceTest extends TestCase {
 
 		return array(
 			'host case and slash' => array( 'input' => 'https://EXAMPLE.test/', 'expected' => 'https://example.test' ),
-			'test server path'    => array( 'input' => 'https://Example.test/api/v1///', 'expected' => 'https://example.test/api/v1' ),
-			'port'                => array( 'input' => 'https://Example.test:8443/api/', 'expected' => 'https://example.test:8443/api' ),
+			'test server path'    => array(
+				'input'    => 'https://Example.test/api/v1///',
+				'expected' => 'https://example.test/api/v1',
+			),
+			'port'                => array(
+				'input'    => 'https://Example.test:8443/api/',
+				'expected' => 'https://example.test:8443/api',
+			),
 			'http'                => array( 'input' => 'http://example.test', 'expected' => $default ),
 			'relative'            => array( 'input' => '/api', 'expected' => $default ),
 			'missing host'        => array( 'input' => 'https:///api', 'expected' => $default ),
@@ -284,6 +444,168 @@ final class SettingsServiceTest extends TestCase {
 	}
 
 	/**
+	 * Verifies the maximum password byte length is accepted.
+	 */
+	public function test_password_at_byte_limit_round_trips(): void {
+		$password = str_repeat( 'p', 4096 );
+		$service  = new SettingsService();
+
+		$service->save( array( 'api_password' => $password ) );
+
+		self::assertSame( $password, $service->password() );
+	}
+
+	/**
+	 * Verifies oversized plaintext is rejected before option storage.
+	 */
+	public function test_password_over_byte_limit_is_rejected_without_storage(): void {
+		$service = new SettingsService();
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Unable to process API credentials securely.' );
+		try {
+			$service->save( array( 'api_password' => str_repeat( 'p', 4097 ) ) );
+		} finally {
+			self::assertFalse( get_option( self::SETTINGS_OPTION, false ) );
+		}
+	}
+
+	/**
+	 * Verifies the encoded boundary is decoded before structural rejection.
+	 */
+	public function test_encoded_payload_at_limit_reaches_strict_decoder(): void {
+		$payload = str_repeat( 'A', 8192 );
+		update_option( self::SETTINGS_OPTION, array( 'api_password' => $payload ) );
+
+		$this->assert_safe_credential_failure( new SettingsService(), $payload );
+
+		self::assertSame( 1, SettingsServiceFunctionControl::$base64_decode_calls );
+	}
+
+	/**
+	 * Verifies oversized encoded input is rejected before Base64 decoding.
+	 */
+	public function test_oversized_encoded_payload_is_rejected_before_decoding(): void {
+		$payload = str_repeat( 'A', 8193 );
+		update_option( self::SETTINGS_OPTION, array( 'api_password' => $payload ) );
+
+		$this->assert_safe_credential_failure( new SettingsService(), $payload );
+
+		self::assertSame( 0, SettingsServiceFunctionControl::$base64_decode_calls );
+	}
+
+	/**
+	 * Verifies the salt option is explicitly excluded from autoload.
+	 */
+	public function test_salt_option_uses_no_autoload(): void {
+		global $wpdb;
+
+		$service = new SettingsService();
+		$service->save( array( 'api_password' => 'autoload secret' ) );
+		// The option table is fixed and the option name is prepared.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$autoload = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT autoload FROM {$wpdb->options} WHERE option_name = %s",
+				self::SALT_OPTION
+			)
+		);
+
+		self::assertSame( 'no', $autoload );
+	}
+
+	/**
+	 * Verifies a concurrent salt winner is reread after add_option loses.
+	 */
+	public function test_salt_creation_race_uses_winning_option(): void {
+		$winning_salt = base64_encode( str_repeat( 'w', 32 ) );
+		SettingsServiceFunctionControl::$race_salt = $winning_salt;
+		$service = new SettingsService();
+
+		$service->save( array( 'api_password' => 'race secret' ) );
+
+		self::assertSame( $winning_salt, get_option( self::SALT_OPTION ) );
+		self::assertSame( 'race secret', $service->password() );
+	}
+
+	/**
+	 * Verifies KDF contexts produce separate raw keys.
+	 */
+	public function test_kdf_derives_distinct_encryption_and_authentication_keys(): void {
+		$service = new SettingsService();
+		$service->save( array( 'api_password' => 'key separation secret' ) );
+
+		self::assertCount( 2, SettingsServiceFunctionControl::$derived_keys );
+		self::assertNotSame(
+			SettingsServiceFunctionControl::$derived_keys[0],
+			SettingsServiceFunctionControl::$derived_keys[1]
+		);
+		self::assertSame( 32, strlen( SettingsServiceFunctionControl::$derived_keys[0] ) );
+		self::assertSame( 32, strlen( SettingsServiceFunctionControl::$derived_keys[1] ) );
+	}
+
+	/**
+	 * Verifies unavailable required primitives produce only the safe error.
+	 */
+	public function test_unavailable_primitive_throws_safe_exception(): void {
+		SettingsServiceFunctionControl::$unavailable_function = 'openssl_encrypt';
+
+		try {
+			( new SettingsService() )->save( array( 'api_password' => 'primitive secret' ) );
+			self::fail( 'Expected secure credential failure.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'Unable to process API credentials securely.', $exception->getMessage() );
+			self::assertStringNotContainsString( 'primitive secret', $exception->getMessage() );
+		}
+	}
+
+	/**
+	 * Verifies a required primitive failure result produces only the safe error.
+	 */
+	public function test_failing_primitive_throws_safe_exception(): void {
+		SettingsServiceFunctionControl::$encrypt_failure = true;
+
+		try {
+			( new SettingsService() )->save( array( 'api_password' => 'failed primitive secret' ) );
+			self::fail( 'Expected secure credential failure.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'Unable to process API credentials securely.', $exception->getMessage() );
+			self::assertStringNotContainsString( 'failed primitive secret', $exception->getMessage() );
+			self::assertFalse( get_option( self::SETTINGS_OPTION, false ) );
+		}
+	}
+
+	/**
+	 * Provides every HMAC call made while encrypting.
+	 *
+	 * @return array<string,array{0:int}>
+	 */
+	public function encryption_hmac_calls(): array {
+		return array(
+			'encryption KDF'     => array( 1 ),
+			'authentication KDF' => array( 2 ),
+			'payload MAC'        => array( 3 ),
+		);
+	}
+
+	/**
+	 * Verifies every encryption-side HMAC failure is fail-closed.
+	 *
+	 * @dataProvider encryption_hmac_calls
+	 */
+	public function test_encryption_hmac_failure_throws_safe_exception( int $failure_call ): void {
+		SettingsServiceFunctionControl::$hash_failure_at = $failure_call;
+
+		try {
+			( new SettingsService() )->save( array( 'api_password' => 'hmac secret' ) );
+			self::fail( 'Expected secure credential failure.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'Unable to process API credentials securely.', $exception->getMessage() );
+			self::assertFalse( get_option( self::SETTINGS_OPTION, false ) );
+		}
+	}
+
+	/**
 	 * Provides malformed encrypted credential representations.
 	 *
 	 * @return array<string,array{0:string}>
@@ -326,6 +648,40 @@ final class SettingsServiceTest extends TestCase {
 	}
 
 	/**
+	 * Verifies direct MAC tampering fails before OpenSSL decryption.
+	 */
+	public function test_tampered_mac_is_rejected_before_decryption(): void {
+		$service = new SettingsService();
+		$service->save( array( 'api_password' => 'do not disclose me' ) );
+		$stored                 = get_option( self::SETTINGS_OPTION );
+		$payload                = base64_decode( $stored['api_password'], true );
+		$last                   = strlen( $payload ) - 1;
+		$payload[ $last ]       = chr( ord( $payload[ $last ] ) ^ 1 );
+		$stored['api_password'] = base64_encode( $payload );
+		update_option( self::SETTINGS_OPTION, $stored );
+		SettingsServiceFunctionControl::$decrypt_calls = 0;
+
+		$this->assert_safe_credential_failure( $service, $stored['api_password'] );
+
+		self::assertSame( 0, SettingsServiceFunctionControl::$decrypt_calls );
+	}
+
+	/**
+	 * Verifies decryption-side MAC generation failure is fail-closed.
+	 */
+	public function test_decryption_hmac_failure_throws_safe_exception_before_decrypt(): void {
+		$service = new SettingsService();
+		$service->save( array( 'api_password' => 'decryption hmac secret' ) );
+		$ciphertext = get_option( self::SETTINGS_OPTION )['api_password'];
+		SettingsServiceFunctionControl::reset();
+		SettingsServiceFunctionControl::$hash_failure_at = 3;
+
+		$this->assert_safe_credential_failure( $service, $ciphertext );
+
+		self::assertSame( 0, SettingsServiceFunctionControl::$decrypt_calls );
+	}
+
+	/**
 	 * Verifies malformed project salt cannot silently change keys.
 	 */
 	public function test_malformed_salt_throws_safe_exception(): void {
@@ -353,4 +709,5 @@ final class SettingsServiceTest extends TestCase {
 			self::assertStringNotContainsString( $ciphertext, $exception->getMessage() );
 		}
 	}
+}
 }

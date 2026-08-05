@@ -40,3 +40,39 @@
 ## Concerns
 
 - Runtime PHPUnit, WPCS, PHPStan, and build results remain unconfirmed until Docker Desktop or a local PHP toolchain is available.
+
+## Review Fixes
+
+### Changes
+
+- Added a documented 4096-byte maximum for plaintext API passwords and reject larger values before encryption or option storage.
+- Added an 8192-byte encoded payload maximum checked before Base64 decoding.
+- Added a decoded payload cap derived from the runtime IV length, maximum padded password ciphertext, and 32-byte HMAC.
+- Routed encryption, decryption, and both KDF contexts through one raw HMAC helper that requires an exact 32-byte string result.
+- Preserved generic credential failures for all new rejection and primitive-failure paths.
+- Reflowed every WPCS-risk line cited by the Task 7 review; neither Task 7 PHP file contains a line longer than 120 characters.
+
+### Tests
+
+- Added accepted-boundary and rejected-over-limit plaintext tests.
+- Added encoded-boundary and pre-decoding oversized payload tests.
+- Added direct MAC tampering and observable HMAC-before-decrypt tests.
+- Added exact salt `autoload = 'no'` persistence coverage.
+- Added salt creation race coverage proving the losing writer rereads and uses the winning salt.
+- Added behavioral checks for distinct 32-byte KDF outputs.
+- Added controlled required-primitive unavailability and HMAC failure coverage for encryption, decryption, and both KDF calls.
+- Namespaced test wrappers delegate to native PHP and WordPress functions by default, leaving the production `SettingsService` API unchanged.
+
+### Verification
+
+- Red and green filtered-test attempts: accepted-unavailable because the Docker Desktop Linux engine pipe is absent.
+- `composer check`: accepted-unavailable for the same Docker engine failure.
+- `git diff --check -- includes/Services/SettingsService.php tests/Unit/SettingsServiceTest.php`: no whitespace findings.
+- Static bounds check: plaintext is bounded before crypto/storage; encoded input is bounded before strict decoding; decoded data is bounded before authentication.
+- Static crypto-order check: strict decoding and structural limits precede HMAC; checked HMAC and `hash_equals()` precede `openssl_decrypt()`.
+- Static failure check: all raw `hash_hmac()` use is centralized behind exact type/length validation.
+- Static WPCS line-length check: no lines exceed 120 characters in either Task 7 PHP file.
+
+### Remaining Concern
+
+- Runtime PHPUnit, WPCS, PHPStan, and distribution-build results remain unconfirmed until the accepted Docker/PHP environment limitation is removed.

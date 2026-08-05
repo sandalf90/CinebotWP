@@ -14,18 +14,31 @@ use Throwable;
  * Validates API settings and protects credentials at rest.
  */
 final class SettingsService {
-	private const SETTINGS_OPTION  = 'cinebot_wp_settings';
-	private const SALT_OPTION      = 'cinebot_wp_encryption_salt';
-	private const DEFAULT_BASE_URL = 'https://ws.cinebot.it';
-	private const CIPHER           = 'aes-256-cbc';
-	private const HMAC_LENGTH      = 32;
-	private const SALT_LENGTH      = 32;
-	private const SAFE_ERROR       = 'Unable to process API credentials securely.';
+	private const SETTINGS_OPTION           = 'cinebot_wp_settings';
+	private const SALT_OPTION               = 'cinebot_wp_encryption_salt';
+	private const DEFAULT_BASE_URL          = 'https://ws.cinebot.it';
+	private const CIPHER                    = 'aes-256-cbc';
+	private const HMAC_LENGTH               = 32;
+	private const SALT_LENGTH               = 32;
+
+	/** Maximum accepted plaintext credential size in bytes. */
+	private const MAX_PASSWORD_BYTES        = 4096;
+
+	/** Conservative cap checked before decoding stored Base64. */
+	private const MAX_ENCODED_PAYLOAD_BYTES = 8192;
+	private const SAFE_ERROR                = 'Unable to process API credentials securely.';
 
 	/**
 	 * Returns settings safe for public and administrative presentation.
 	 *
-	 * @return array{api_username:string,api_frontend:int|null,sync_frequency:string,sync_enabled:bool,api_base_url:string,has_password:bool}
+	 * @return array{
+	 *     api_username:string,
+	 *     api_frontend:int|null,
+	 *     sync_frequency:string,
+	 *     sync_enabled:bool,
+	 *     api_base_url:string,
+	 *     has_password:bool
+	 * }
 	 */
 	public function get(): array {
 		$settings = $this->storedSettings();
@@ -36,7 +49,9 @@ final class SettingsService {
 			'sync_frequency' => $this->normalizeFrequency( $settings['sync_frequency'] ?? 'daily' ),
 			'sync_enabled'   => $this->normalizeEnabled( $settings['sync_enabled'] ?? false ),
 			'api_base_url'   => $this->normalizeBaseUrl( $settings['api_base_url'] ?? self::DEFAULT_BASE_URL ),
-			'has_password'   => isset( $settings['api_password'] ) && is_string( $settings['api_password'] ) && '' !== $settings['api_password'],
+			'has_password'   => isset( $settings['api_password'] )
+				&& is_string( $settings['api_password'] )
+				&& '' !== $settings['api_password'],
 		);
 	}
 
@@ -44,7 +59,14 @@ final class SettingsService {
 	 * Validates and persists submitted settings.
 	 *
 	 * @param array<string,mixed> $input Submitted settings.
-	 * @return array{api_username:string,api_frontend:int|null,sync_frequency:string,sync_enabled:bool,api_base_url:string,has_password:bool}
+	 * @return array{
+	 *     api_username:string,
+	 *     api_frontend:int|null,
+	 *     sync_frequency:string,
+	 *     sync_enabled:bool,
+	 *     api_base_url:string,
+	 *     has_password:bool
+	 * }
 	 */
 	public function save( array $input ): array {
 		$existing = $this->storedSettings();
@@ -59,7 +81,11 @@ final class SettingsService {
 		$password = $input['api_password'] ?? '';
 		if ( is_string( $password ) && '' !== $password ) {
 			$settings['api_password'] = $this->encrypt( $password );
-		} elseif ( isset( $existing['api_password'] ) && is_string( $existing['api_password'] ) && '' !== $existing['api_password'] ) {
+		} elseif (
+			isset( $existing['api_password'] )
+			&& is_string( $existing['api_password'] )
+			&& '' !== $existing['api_password']
+		) {
 			$settings['api_password'] = $existing['api_password'];
 		}
 
@@ -80,7 +106,11 @@ final class SettingsService {
 	 */
 	public function password(): string {
 		$settings = $this->storedSettings();
-		if ( ! isset( $settings['api_password'] ) || ! is_string( $settings['api_password'] ) || '' === $settings['api_password'] ) {
+		if (
+			! isset( $settings['api_password'] )
+			|| ! is_string( $settings['api_password'] )
+			|| '' === $settings['api_password']
+		) {
 			return '';
 		}
 
@@ -155,7 +185,13 @@ final class SettingsService {
 		}
 
 		$maximum = (string) PHP_INT_MAX;
-		if ( strlen( $normalized ) > strlen( $maximum ) || ( strlen( $normalized ) === strlen( $maximum ) && strcmp( $normalized, $maximum ) > 0 ) ) {
+		if (
+			strlen( $normalized ) > strlen( $maximum )
+			|| (
+				strlen( $normalized ) === strlen( $maximum )
+				&& strcmp( $normalized, $maximum ) > 0
+			)
+		) {
 			return null;
 		}
 
@@ -222,6 +258,10 @@ final class SettingsService {
 	 * Encrypts and authenticates a plaintext credential.
 	 */
 	private function encrypt( string $password ): string {
+		if ( strlen( $password ) > self::MAX_PASSWORD_BYTES ) {
+			throw new RuntimeException( self::SAFE_ERROR );
+		}
+
 		$this->requireCrypto();
 
 		try {
@@ -232,13 +272,19 @@ final class SettingsService {
 
 			$iv         = random_bytes( $iv_length );
 			$keys       = $this->deriveKeys();
-			$ciphertext = openssl_encrypt( $password, self::CIPHER, $keys['encryption'], OPENSSL_RAW_DATA, $iv );
+			$ciphertext = openssl_encrypt(
+				$password,
+				self::CIPHER,
+				$keys['encryption'],
+				OPENSSL_RAW_DATA,
+				$iv
+			);
 			if ( false === $ciphertext || '' === $ciphertext ) {
 				throw new RuntimeException( self::SAFE_ERROR );
 			}
 
 			$authenticated = $iv . $ciphertext;
-			$mac           = hash_hmac( 'sha256', $authenticated, $keys['authentication'], true );
+			$mac           = $this->hmac( $authenticated, $keys['authentication'] );
 
 			return base64_encode( $authenticated . $mac );
 		} catch ( Throwable $exception ) {
@@ -250,12 +296,24 @@ final class SettingsService {
 	 * Authenticates and decrypts a stored credential.
 	 */
 	private function decrypt( string $encoded ): string {
+		if ( strlen( $encoded ) > self::MAX_ENCODED_PAYLOAD_BYTES ) {
+			throw new RuntimeException( self::SAFE_ERROR );
+		}
+
 		$this->requireCrypto();
 
 		try {
 			$iv_length = openssl_cipher_iv_length( self::CIPHER );
 			$payload   = base64_decode( $encoded, true );
 			if ( false === $iv_length || $iv_length < 1 || false === $payload ) {
+				throw new RuntimeException( self::SAFE_ERROR );
+			}
+			// AES-CBC may add one full 16-byte PKCS#7 padding block.
+			$maximum_payload = $iv_length
+				+ self::MAX_PASSWORD_BYTES
+				+ 16
+				+ self::HMAC_LENGTH;
+			if ( strlen( $payload ) > $maximum_payload ) {
 				throw new RuntimeException( self::SAFE_ERROR );
 			}
 
@@ -267,14 +325,20 @@ final class SettingsService {
 			$authenticated = substr( $payload, 0, $iv_length + $ciphertext_length );
 			$stored_mac    = substr( $payload, -self::HMAC_LENGTH );
 			$keys          = $this->deriveKeys();
-			$expected_mac  = hash_hmac( 'sha256', $authenticated, $keys['authentication'], true );
+			$expected_mac  = $this->hmac( $authenticated, $keys['authentication'] );
 			if ( ! hash_equals( $expected_mac, $stored_mac ) ) {
 				throw new RuntimeException( self::SAFE_ERROR );
 			}
 
 			$iv         = substr( $authenticated, 0, $iv_length );
 			$ciphertext = substr( $authenticated, $iv_length );
-			$password   = openssl_decrypt( $ciphertext, self::CIPHER, $keys['encryption'], OPENSSL_RAW_DATA, $iv );
+			$password   = openssl_decrypt(
+				$ciphertext,
+				self::CIPHER,
+				$keys['encryption'],
+				OPENSSL_RAW_DATA,
+				$iv
+			);
 			if ( false === $password ) {
 				throw new RuntimeException( self::SAFE_ERROR );
 			}
@@ -298,9 +362,27 @@ final class SettingsService {
 		$project_salt = $this->projectSalt();
 
 		return array(
-			'encryption'     => hash_hmac( 'sha256', "cinebot-wp\0encryption\0" . $project_salt, AUTH_SALT, true ),
-			'authentication' => hash_hmac( 'sha256', "cinebot-wp\0authentication\0" . $project_salt, AUTH_SALT, true ),
+			'encryption'     => $this->hmac(
+				"cinebot-wp\0encryption\0" . $project_salt,
+				AUTH_SALT
+			),
+			'authentication' => $this->hmac(
+				"cinebot-wp\0authentication\0" . $project_salt,
+				AUTH_SALT
+			),
 		);
+	}
+
+	/**
+	 * Computes one raw SHA-256 HMAC and fails closed on primitive failure.
+	 */
+	private function hmac( string $data, string $key ): string {
+		$mac = hash_hmac( 'sha256', $data, $key, true );
+		if ( ! is_string( $mac ) || self::HMAC_LENGTH !== strlen( $mac ) ) {
+			throw new RuntimeException( self::SAFE_ERROR );
+		}
+
+		return $mac;
 	}
 
 	/**
@@ -331,7 +413,14 @@ final class SettingsService {
 	 * Fails closed when required cryptographic primitives are unavailable.
 	 */
 	private function requireCrypto(): void {
-		$functions = array( 'openssl_encrypt', 'openssl_decrypt', 'openssl_cipher_iv_length', 'random_bytes', 'hash_hmac', 'hash_equals' );
+		$functions = array(
+			'openssl_encrypt',
+			'openssl_decrypt',
+			'openssl_cipher_iv_length',
+			'random_bytes',
+			'hash_hmac',
+			'hash_equals',
+		);
 		foreach ( $functions as $function ) {
 			if ( ! function_exists( $function ) ) {
 				throw new RuntimeException( self::SAFE_ERROR );
