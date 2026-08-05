@@ -336,18 +336,24 @@ Create `tests/wp-tests-config.php`:
 
 ```php
 <?php
-define('ABSPATH', rtrim((string) getenv('WP_CORE_DIR'), '/\\') . '/');
-define('DB_NAME', (string) getenv('WP_TESTS_DB_NAME'));
-define('DB_USER', (string) getenv('WP_TESTS_DB_USER'));
-define('DB_PASSWORD', (string) getenv('WP_TESTS_DB_PASSWORD'));
-define('DB_HOST', (string) getenv('WP_TESTS_DB_HOST'));
-define('DB_CHARSET', 'utf8');
-define('DB_COLLATE', '');
-define('WP_TESTS_DOMAIN', 'example.org');
-define('WP_TESTS_EMAIL', 'admin@example.org');
-define('WP_TESTS_TITLE', 'Cinebot WP Tests');
-define('WP_PHP_BINARY', 'php');
-define('WP_DEBUG', true);
+/**
+ * WordPress integration test configuration.
+ *
+ * @package CinebotWp
+ */
+
+define( 'ABSPATH', rtrim( (string) getenv( 'WP_CORE_DIR' ), '/\\' ) . '/' );
+define( 'DB_NAME', (string) getenv( 'WP_TESTS_DB_NAME' ) );
+define( 'DB_USER', (string) getenv( 'WP_TESTS_DB_USER' ) );
+define( 'DB_PASSWORD', (string) getenv( 'WP_TESTS_DB_PASSWORD' ) );
+define( 'DB_HOST', (string) getenv( 'WP_TESTS_DB_HOST' ) );
+define( 'DB_CHARSET', 'utf8' );
+define( 'DB_COLLATE', '' );
+define( 'WP_TESTS_DOMAIN', 'example.org' );
+define( 'WP_TESTS_EMAIL', 'admin@example.org' );
+define( 'WP_TESTS_TITLE', 'Cinebot WP Tests' );
+define( 'WP_PHP_BINARY', 'php' );
+define( 'WP_DEBUG', true );
 $table_prefix = 'wptests_';
 ```
 
@@ -355,17 +361,26 @@ Create `tests/bootstrap.php`:
 
 ```php
 <?php
-$pluginRoot = dirname(__DIR__);
-$testsDir = getenv('WP_TESTS_DIR') ?: '/tmp/wordpress-develop/tests/phpunit';
+/**
+ * Load the WordPress integration test environment.
+ *
+ * @package CinebotWp
+ */
 
-require $pluginRoot . '/vendor/autoload.php';
-putenv('WP_TESTS_CONFIG_FILE_PATH=' . __DIR__ . '/wp-tests-config.php');
+$plugin_root = dirname( __DIR__ );
+$tests_dir   = getenv( 'WP_TESTS_DIR' ) ?: '/tmp/wordpress-develop/tests/phpunit';
 
-require $testsDir . '/includes/functions.php';
-tests_add_filter('muplugins_loaded', static function () use ($pluginRoot): void {
-    require $pluginRoot . '/cinebot-wp.php';
-});
-require $testsDir . '/includes/bootstrap.php';
+require $plugin_root . '/vendor/autoload.php';
+putenv( 'WP_TESTS_CONFIG_FILE_PATH=' . __DIR__ . '/wp-tests-config.php' );
+
+require $tests_dir . '/includes/functions.php';
+tests_add_filter(
+	'muplugins_loaded',
+	static function () use ( $plugin_root ): void {
+		require $plugin_root . '/cinebot-wp.php';
+	}
+);
+require $tests_dir . '/includes/bootstrap.php';
 ```
 
 Create `phpcs.xml.dist`:
@@ -399,8 +414,6 @@ parameters:
     paths:
         - cinebot-wp.php
         - includes
-        - templates
-        - uninstall.php
     excludePaths:
         - vendor
         - dist
@@ -410,25 +423,90 @@ parameters:
 
 ```php
 <?php
+/**
+ * Plugin foundation integration tests.
+ *
+ * @package CinebotWp
+ */
+
 namespace CinebotWp\Tests\Integration;
 
 use CinebotWp\Plugin;
+use ReflectionClass;
 use WP_UnitTestCase;
+use ZipArchive;
 
-final class PluginBootstrapTest extends WP_UnitTestCase
-{
-    public function test_plugin_bootstraps_once(): void
-    {
-        self::assertSame(Plugin::instance(), Plugin::instance());
-        self::assertTrue(defined('CINEBOT_WP_VERSION'));
-        self::assertSame('1.0.0', CINEBOT_WP_VERSION);
-    }
+/**
+ * Verifies the executable plugin foundation.
+ */
+final class PluginBootstrapTest extends WP_UnitTestCase {
+	public function test_plugin_bootstraps_once(): void {
+		$boot_count = 0;
+		$observer   = static function () use ( &$boot_count ): void {
+			++$boot_count;
+		};
 
-    public function test_runtime_does_not_require_composer_vendor_directory(): void
-    {
-        self::assertFileExists(CINEBOT_WP_PATH . 'includes/autoload.php');
-        self::assertStringNotContainsString('vendor/autoload.php', file_get_contents(CINEBOT_WP_FILE));
-    }
+		add_action( 'cinebot_wp_booted', $observer );
+
+		try {
+			$plugin = ( new ReflectionClass( Plugin::class ) )->newInstanceWithoutConstructor();
+			$plugin->boot();
+			$plugin->boot();
+		} finally {
+			remove_action( 'cinebot_wp_booted', $observer );
+		}
+
+		self::assertSame( 1, $boot_count );
+		self::assertSame( Plugin::instance(), Plugin::instance() );
+		self::assertTrue( defined( 'CINEBOT_WP_VERSION' ) );
+		self::assertSame( '1.0.0', CINEBOT_WP_VERSION );
+	}
+
+	public function test_runtime_does_not_require_composer_vendor_directory(): void {
+		self::assertFileExists( CINEBOT_WP_PATH . 'includes/autoload.php' );
+		// Direct access is appropriate for a local test fixture.
+		// phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$entry_point = file_get_contents( CINEBOT_WP_FILE );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		self::assertIsString( $entry_point );
+		self::assertStringNotContainsString( 'vendor/autoload.php', $entry_point );
+	}
+
+	public function test_distribution_contains_only_runtime_files(): void {
+		$archive_path = CINEBOT_WP_PATH . 'dist/cinebot-wp.zip';
+
+		ob_start();
+		try {
+			require CINEBOT_WP_PATH . 'tools/build.php';
+		} finally {
+			$build_output = ob_get_clean();
+		}
+
+		self::assertIsString( $build_output );
+		self::assertStringContainsString( $archive_path, $build_output );
+
+		$archive = new ZipArchive();
+		self::assertTrue( $archive->open( $archive_path ) );
+
+		try {
+			self::assertNotFalse( $archive->locateName( 'cinebot-wp/' ) );
+			self::assertNotFalse( $archive->locateName( 'cinebot-wp/cinebot-wp.php' ) );
+			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/autoload.php' ) );
+			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/Plugin.php' ) );
+
+			for ( $index = 0; $index < $archive->count(); ++$index ) {
+				$name = $archive->getNameIndex( $index );
+				self::assertIsString( $name );
+				self::assertStringStartsWith( 'cinebot-wp/', $name );
+				self::assertDoesNotMatchRegularExpression(
+					'#^cinebot-wp/(?:\.git|\.github|docker|docs|specs|tests|tools|vendor|dist)(?:/|$)#',
+					$name
+				);
+			}
+		} finally {
+			$archive->close();
+		}
+	}
 }
 ```
 
@@ -442,28 +520,50 @@ rtk docker compose run --rm php composer install
 rtk docker compose run --rm php composer test:integration -- --filter PluginBootstrapTest
 ```
 
-Expected: failure because `CinebotWp\Plugin` and the plugin constants do not exist.
+Expected: failure because `CinebotWp\Plugin`, the plugin constants, the one-time boot action, and the distribution archive behavior do not exist.
 
 - [ ] **Step 6: Implement the committed production autoloader and bootstrap**
 
 `includes/autoload.php` registers only classes beginning with `CinebotWp\`, maps the remainder to `includes/{Namespace/Path}.php`, rejects paths containing `..`, and requires the file only when it exists. `cinebot-wp.php` requires this committed loader, never `vendor/autoload.php`.
 
-Implement `Plugin` as a final singleton with an idempotent `boot()` method. In `cinebot-wp.php`, define constants, load `includes/autoload.php`, and call `Plugin::instance()->boot()`. Activation and deactivation callbacks are added in Task 2 when their concrete methods exist.
+Implement `Plugin` as a final singleton with an idempotent `boot()` method. A successful first boot fires `cinebot_wp_booted` once after setting the guard; later calls return without firing it again. In `cinebot-wp.php`, define constants, load `includes/autoload.php`, and call `Plugin::instance()->boot()`. Activation and deactivation callbacks are added in Task 2 when their concrete methods exist.
 
 Use this public shape:
 
 ```php
-final class Plugin
-{
-    private static $instance;
-    private $booted = false;
+/**
+ * Main plugin coordinator.
+ */
+final class Plugin {
+	/** @var self|null */
+	private static $instance;
 
-    public static function instance(): self;
-    public function boot(): void;
+	/** @var bool */
+	private $booted = false;
+
+	public static function instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
+
+	public function boot(): void {
+		if ( $this->booted ) {
+			return;
+		}
+
+		$this->booted = true;
+		do_action( 'cinebot_wp_booted' );
+	}
+
+	private function __construct() {
+	}
 }
 ```
 
-Create `tools/build.php` using `ZipArchive`. It writes `dist/cinebot-wp.zip` with top-level directory `cinebot-wp/` and includes `cinebot-wp.php`, `uninstall.php`, `includes/`, `assets/`, `templates/`, `languages/`, `README.md`, and `LICENSE` when present. It excludes `.git`, `.github`, `docker`, `docs`, `specs`, `tests`, `tools`, `vendor`, and existing `dist`.
+Create `tools/build.php` using `ZipArchive`. It writes `dist/cinebot-wp.zip` with top-level directory `cinebot-wp/` and includes `cinebot-wp.php`, `uninstall.php`, `includes/`, `assets/`, `templates/`, `languages/`, `README.md`, and `LICENSE` when present. It excludes `.git`, `.github`, `docker`, `docs`, `specs`, `tests`, `tools`, `vendor`, and existing `dist`. Check every `ZipArchive::addFile()` result; on failure close and remove the incomplete archive, then throw a `RuntimeException` naming the rejected source path.
 
 - [ ] **Step 7: Run all foundation gates**
 
@@ -543,6 +643,8 @@ Create the seven tables exactly as approved in the design. Important implementat
 In `cinebot-wp.php`, register only `[Plugin::class, 'activate']` and `[Plugin::class, 'deactivate']`. `Plugin::activate()` constructs `SchemaInstaller` with global `$wpdb` and calls `install()`. `Plugin::deactivate()` only clears `cinebot_wp_sync_event`; it must not delete data. No other class is registered as a lifecycle callback.
 
 Implement `uninstall.php` to verify `WP_UNINSTALL_PLUGIN`, drop the seven tables, delete `cinebot_wp_settings`, `cinebot_wp_db_version`, `cinebot_wp_encryption_salt`, `cinebot_wp_sync_lock`, clear scheduled hooks, and delete `_transient_cinebot_prog_%` plus matching timeout rows. This single-site-only cleanup is documented; no network/site loop is added.
+
+When `uninstall.php` is created, add it to `parameters.paths` in `phpstan.neon.dist`; Task 1 intentionally lists only paths that exist at that foundation stage.
 
 - [ ] **Step 5: Run focused and full tests**
 
@@ -1258,6 +1360,8 @@ Register both shortcodes through `Plugin` in this task so the server-rendered fe
 2. plugin `templates/{template}.php`
 
 Pass a fixed context array; do not `extract()` untrusted keys. The renderer starts output buffering, includes the selected file, and always cleans the buffer on failure.
+
+When the `templates/` directory is created, add it to `parameters.paths` in `phpstan.neon.dist`.
 
 - [ ] **Step 4: Run tests and commit**
 

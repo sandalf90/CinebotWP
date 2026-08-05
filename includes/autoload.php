@@ -6,20 +6,20 @@
  */
 
 spl_autoload_register(
-	static function (string $class): void {
+	static function ( string $class ): void {
 		$prefix = 'CinebotWp\\';
 
-		if (0 !== strpos($class, $prefix)) {
+		if ( 0 !== strpos( $class, $prefix ) ) {
 			return;
 		}
 
-		$relativeClass = substr($class, strlen($prefix));
-		if (false === $relativeClass || false !== strpos($relativeClass, '..')) {
+		$relative_class = substr( $class, strlen( $prefix ) );
+		if ( false === $relative_class || false !== strpos( $relative_class, '..' ) ) {
 			return;
 		}
 
-		$file = __DIR__ . '/' . str_replace('\\', '/', $relativeClass) . '.php';
-		if (is_file($file)) {
+		$file = __DIR__ . '/' . str_replace( '\\', '/', $relative_class ) . '.php';
+		if ( is_file( $file ) ) {
 			require $file;
 		}
 	}

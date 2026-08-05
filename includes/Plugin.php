@@ -26,7 +26,7 @@ final class Plugin {
 	 * Return the singleton plugin instance.
 	 */
 	public static function instance(): self {
-		if (null === self::$instance) {
+		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 
@@ -37,11 +37,12 @@ final class Plugin {
 	 * Boot the plugin once.
 	 */
 	public function boot(): void {
-		if ($this->booted) {
+		if ( $this->booted ) {
 			return;
 		}
 
 		$this->booted = true;
+		do_action( 'cinebot_wp_booted' );
 	}
 
 	/**

@@ -5,10 +5,10 @@
  * @package CinebotWp
  */
 
-$projectRoot = dirname(__DIR__);
-$distDir     = $projectRoot . '/dist';
-$archivePath = $distDir . '/cinebot-wp.zip';
-$runtime     = array(
+$project_root = dirname( __DIR__ );
+$dist_dir     = $project_root . '/dist';
+$archive_path = $dist_dir . '/cinebot-wp.zip';
+$runtime      = array(
 	'cinebot-wp.php',
 	'uninstall.php',
 	'includes',
@@ -19,44 +19,77 @@ $runtime     = array(
 	'LICENSE',
 );
 
-if (! is_dir($distDir) && ! mkdir($distDir, 0777, true) && ! is_dir($distDir)) {
-	throw new RuntimeException('Unable to create the distribution directory.');
+if ( ! is_dir( $dist_dir ) && ! mkdir( $dist_dir, 0777, true ) && ! is_dir( $dist_dir ) ) {
+	throw new RuntimeException( 'Unable to create the distribution directory.' );
 }
 
 $archive = new ZipArchive();
-if (true !== $archive->open($archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE)) {
-	throw new RuntimeException('Unable to create the distribution archive.');
+if ( true !== $archive->open( $archive_path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
+	throw new RuntimeException( 'Unable to create the distribution archive.' );
 }
 
-foreach ($runtime as $entry) {
-	$source = $projectRoot . '/' . $entry;
-	if (is_file($source)) {
-		$archive->addFile($source, 'cinebot-wp/' . $entry);
+$discard_archive = static function () use ( $archive, $archive_path ): bool {
+	$archive->close();
+
+	return ! is_file( $archive_path ) || unlink( $archive_path );
+};
+
+$add_file = static function ( string $source, string $destination ) use (
+	$archive,
+	$archive_path,
+	$discard_archive
+): void {
+	if ( $archive->addFile( $source, $destination ) ) {
+		return;
+	}
+
+	$cleanup_failed = ! $discard_archive();
+	$message        = sprintf( 'Unable to add runtime file to archive: %s', $source );
+	if ( $cleanup_failed ) {
+		$message .= sprintf( '; incomplete archive could not be removed: %s', $archive_path );
+	}
+
+	throw new RuntimeException( $message );
+};
+
+if ( ! $archive->addEmptyDir( 'cinebot-wp' ) ) {
+	$discard_archive();
+	$message = sprintf( 'Unable to add archive root for source: %s', $project_root );
+	throw new RuntimeException( $message );
+}
+
+foreach ( $runtime as $entry ) {
+	$source = $project_root . '/' . $entry;
+	if ( is_file( $source ) ) {
+		$add_file( $source, 'cinebot-wp/' . $entry );
 		continue;
 	}
 
-	if (! is_dir($source)) {
+	if ( ! is_dir( $source ) ) {
 		continue;
 	}
 
 	$files = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS),
+		new RecursiveDirectoryIterator( $source, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::LEAVES_ONLY
 	);
 
-	foreach ($files as $file) {
-		if (! $file->isFile()) {
+	foreach ( $files as $file ) {
+		if ( ! $file->isFile() ) {
 			continue;
 		}
 
-		$relativePath = substr($file->getPathname(), strlen($projectRoot) + 1);
-		$relativePath = str_replace('\\', '/', $relativePath);
-		$archive->addFile($file->getPathname(), 'cinebot-wp/' . $relativePath);
+		$relative_path = substr( $file->getPathname(), strlen( $project_root ) + 1 );
+		$relative_path = str_replace( '\\', '/', $relative_path );
+		$add_file( $file->getPathname(), 'cinebot-wp/' . $relative_path );
 	}
 }
 
-if (! $archive->close()) {
-	throw new RuntimeException('Unable to finalize the distribution archive.');
+if ( ! $archive->close() ) {
+	if ( is_file( $archive_path ) ) {
+		unlink( $archive_path );
+	}
+	throw new RuntimeException( 'Unable to finalize the distribution archive.' );
 }
 
-echo $archivePath . PHP_EOL;
+echo $archive_path . PHP_EOL;

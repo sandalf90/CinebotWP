@@ -11,10 +11,10 @@
  * @package CinebotWp
  */
 
-define('CINEBOT_WP_VERSION', '1.0.0');
-define('CINEBOT_WP_FILE', __FILE__);
-define('CINEBOT_WP_PATH', plugin_dir_path(__FILE__));
-define('CINEBOT_WP_URL', plugin_dir_url(__FILE__));
+define( 'CINEBOT_WP_VERSION', '1.0.0' );
+define( 'CINEBOT_WP_FILE', __FILE__ );
+define( 'CINEBOT_WP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'CINEBOT_WP_URL', plugin_dir_url( __FILE__ ) );
 
 require CINEBOT_WP_PATH . 'includes/autoload.php';
 

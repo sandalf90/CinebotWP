@@ -7,8 +7,6 @@ parameters:
     paths:
         - cinebot-wp.php
         - includes
-        - templates
-        - uninstall.php
     excludePaths:
         - vendor
         - dist
