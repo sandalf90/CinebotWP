@@ -10,6 +10,7 @@ NEEDS_RUNTIME: the authoritative approved fixture is present at `tests/fixtures/
 - `SyncResult` exposes the required outcome, counters, and safe message API.
 - `SyncService` validates payload shape, locks both entry points, performs transactional hierarchy upserts, preserves manual rows, reconciles missing API rows through cascades, invalidates cache after commit, and safely logs outcomes.
 - Expanded integration coverage for authoritative hierarchy mapping, changes, manual ownership, optional arrays, four-level reconciliation/reactivation, frontend isolation, rollback failure, lock contention/expiry/non-owner release, cache ordering, canonical payload hash, and safe result/log errors.
+- Added independent coverage for a manual venue reached through an API-owned title, transport-spy proof that lock contention does not fetch, and a forced event-insert failure after transaction start that rolls back title, venue, and event writes while recording a safe error log.
 - Invalid top-level and envelope payloads are intentionally rejected before `SyncLogRepository::start()`, so they return a safe error without a history row. This follows the brief's validation-before-log boundary; malformed children after logging starts produce an error history row.
 
 ## Verification

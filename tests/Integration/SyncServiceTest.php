@@ -17,6 +17,8 @@ use CinebotWp\Repositories\PrezzoRepository;
 use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Repositories\TitoloRepository;
+use CinebotWp\Services\ApiClient;
+use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
 use WP_UnitTestCase;
 use wpdb;
@@ -129,6 +131,20 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertSame( 'Manual venue', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
 	}
 
+	/** A manual venue remains unchanged while its API-owned title reaches venue upsert. */
+	public function test_manual_venue_remains_untouched_for_api_owned_title(): void {
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		$title = ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 );
+		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+		self::$db->update( self::$db->prefix . 'cinebot_locali', array( 'source' => 'manual', 'nome' => 'Manual venue' ), array( 'id' => $event->localeId ) );
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'][0]['eventi'][0]['locale'] = 'Changed API venue';
+
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( 'api', ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->source );
+		self::assertSame( 'Manual venue', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
+	}
+
 	/** Missing optional title and hierarchy arrays are accepted as empty arrays. */
 	public function test_missing_optional_arrays_are_treated_as_empty(): void {
 		$payload = $this->fixture();
@@ -211,13 +227,48 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertFalse( get_transient( 'cinebot_prog_test' ) );
 	}
 
-	/** Lock contention prevents sync from attempting an API request. */
-	public function test_lock_contention_returns_locked_before_api_call(): void {
+	/** Lock contention returns before a real API client's transport is invoked. */
+	public function test_lock_contention_returns_locked_without_transport_call(): void {
 		$lock = new \CinebotWp\Services\SyncLock( self::$db );
 		$token = $lock->acquire();
-		$result = ( new SyncService( self::$db ) )->sync();
+		$calls = 0;
+		$client = new ApiClient(
+			new SettingsService(),
+			static function ( string $url, array $args ) use ( &$calls ): array {
+				++$calls;
+				return array();
+			}
+		);
+		$result = ( new SyncService( self::$db, $client ) )->sync();
 		self::assertSame( 'locked', $result->status() );
+		self::assertSame( 0, $calls );
 		self::assertTrue( $lock->release( $token ) );
+	}
+
+	/** An event persistence failure rolls back earlier title and venue writes. */
+	public function test_event_insert_failure_rolls_back_partial_hierarchy_and_logs_safely(): void {
+		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			public function query( $query ) {
+				if ( is_string( $query ) && false !== strpos( $query, 'cinebot_eventi' ) && 1 === preg_match( '/^INSERT /i', $query ) ) {
+					return false;
+				}
+				return parent::query( $query );
+			}
+		};
+		$failing_db->set_prefix( self::$db->prefix );
+
+		try {
+			$result = $this->service( $failing_db )->syncPayload( $this->fixture() );
+			self::assertSame( 'error', $result->status() );
+			self::assertSame( 0, ( new TitoloRepository( self::$db ) )->count() );
+			self::assertNull( ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 ) );
+			self::assertSame( 0, ( new LocaleRepository( self::$db ) )->count() );
+			$log = ( new SyncLogRepository( self::$db ) )->latest();
+			self::assertSame( 'error', $log->status );
+			self::assertSame( 'Schedule synchronization failed.', $log->errorMessage );
+		} finally {
+			$failing_db->close();
+		}
 	}
 
 	/** A reported rollback failure remains safe and is recorded without database detail. */
