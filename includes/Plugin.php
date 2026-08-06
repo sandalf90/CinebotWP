@@ -18,6 +18,8 @@ use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
+use CinebotWp\Frontend\ShortcodeHandler;
+use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\PrezzoRepository;
@@ -86,6 +88,7 @@ final class Plugin {
 		$this->booted = true;
 		self::scheduler()->register();
 		self::admin_menu()->register();
+		self::shortcodes()->register();
 		do_action( 'cinebot_wp_booted' );
 	}
 
@@ -145,6 +148,16 @@ final class Plugin {
 			$tipologie_page,
 			$tipologia_edit,
 			$log_page
+		);
+	}
+
+	/** Compose the frontend shortcodes at the plugin boundary. */
+	private static function shortcodes(): ShortcodeHandler {
+		global $wpdb;
+
+		return new ShortcodeHandler(
+			new TitoloRepository( $wpdb ),
+			new TemplateRenderer()
 		);
 	}
 
