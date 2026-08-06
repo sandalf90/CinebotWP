@@ -2,14 +2,15 @@
 
 ## Status
 
-NEEDS_CONTEXT: implementation and test sources are complete, but runtime verification is blocked by the user's Docker decision and no local PHP or Composer executable. The task brief refers to an approved supplied JSON fixture, but no such source exists in this workspace; `tests/fixtures/cinebot-sample.json` is an implementation fixture matching the documented hierarchy and acceptance identifiers.
+NEEDS_RUNTIME: the authoritative approved fixture is present at `tests/fixtures/cinebot-sample.json`, is valid JSON, and is staged unchanged. Dynamic verification remains unavailable because Docker is disabled and no local PHP or Composer executable is installed.
 
 ## Delivered
 
-- `SyncLock` atomically acquires a non-autoloaded option, reclaims only an exact expired stored value, and releases only its owning token.
+- `SyncLock` atomically acquires a non-autoloaded option, reclaims an exact expired stored value at or after its expiry boundary, and releases only its owning token.
 - `SyncResult` exposes the required outcome, counters, and safe message API.
 - `SyncService` validates payload shape, locks both entry points, performs transactional hierarchy upserts, preserves manual rows, reconciles missing API rows through cascades, invalidates cache after commit, and safely logs outcomes.
-- Added the Task 9 fixture plus focused integration tests for initial mapping, idempotence/hash invariance, malformed rollback, lock contention, expiry, and non-owner release.
+- Expanded integration coverage for authoritative hierarchy mapping, changes, manual ownership, optional arrays, four-level reconciliation/reactivation, frontend isolation, rollback failure, lock contention/expiry/non-owner release, cache ordering, canonical payload hash, and safe result/log errors.
+- Invalid top-level and envelope payloads are intentionally rejected before `SyncLogRepository::start()`, so they return a safe error without a history row. This follows the brief's validation-before-log boundary; malformed children after logging starts produce an error history row.
 
 ## Verification
 
@@ -20,4 +21,4 @@ NEEDS_CONTEXT: implementation and test sources are complete, but runtime verific
 
 ## Follow-up
 
-Run the focused integration suite and `composer check` in the project Docker environment, then replace the synthesized fixture if the approved source fixture becomes available.
+Run the focused integration suite and `composer check` in the project Docker environment.

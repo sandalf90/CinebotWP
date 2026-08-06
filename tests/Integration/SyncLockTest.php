@@ -31,21 +31,31 @@ final class SyncLockTest extends WP_UnitTestCase {
 		self::assertFalse( $lock->release( $token ) );
 	}
 
-	/** An expired exact stored value may be reclaimed once. */
-	public function test_expired_lock_is_reclaimed_but_invalid_ttl_is_rejected(): void {
+	/** An expired exact stored value may be reclaimed at the expiry boundary. */
+	public function test_expired_lock_is_reclaimed_at_or_after_expiry(): void {
+		$now = 1700000000;
 		add_option(
 			'cinebot_wp_sync_lock',
-			wp_json_encode( array( 'token' => str_repeat( 'b', 64 ), 'expires_at' => time() - 1 ) ),
+			wp_json_encode( array( 'token' => str_repeat( 'b', 64 ), 'expires_at' => $now ) ),
 			'',
 			false
 		);
 
-		$lock = new SyncLock();
+		$lock = new SyncLock(
+			null,
+			static function () use ( $now ): int {
+				return $now;
+			}
+		);
 		$token = $lock->acquire( 1 );
 		self::assertIsString( $token );
 		self::assertNotSame( str_repeat( 'b', 64 ), $token );
 		self::assertTrue( $lock->release( $token ) );
+	}
 
+	/** Invalid TTL values fail before an option is created. */
+	public function test_invalid_ttl_is_rejected(): void {
+		$lock = new SyncLock();
 		$this->expectException( \InvalidArgumentException::class );
 		$lock->acquire( 0 );
 	}

@@ -17,10 +17,16 @@ final class SyncLock {
 	/** @var wpdb */
 	private $db;
 
+	/** @var callable():int */
+	private $clock;
+
 	/** Create the lock using the site database connection. */
-	public function __construct( ?wpdb $db = null ) {
+	public function __construct( ?wpdb $db = null, ?callable $clock = null ) {
 		global $wpdb;
-		$this->db = $db ?? $wpdb;
+		$this->db    = $db ?? $wpdb;
+		$this->clock = $clock ?? static function (): int {
+			return time();
+		};
 	}
 
 	/** Acquire ownership or return null when another valid owner holds it. */
@@ -30,7 +36,7 @@ final class SyncLock {
 		}
 
 		$token = bin2hex( random_bytes( 32 ) );
-		$value = wp_json_encode( array( 'token' => $token, 'expires_at' => time() + $ttl ) );
+		$value = wp_json_encode( array( 'token' => $token, 'expires_at' => $this->now() + $ttl ) );
 		if ( is_string( $value ) && add_option( self::OPTION, $value, '', false ) ) {
 			return $token;
 		}
@@ -72,7 +78,12 @@ final class SyncLock {
 			&& isset( $data['token'], $data['expires_at'] )
 			&& is_string( $data['token'] )
 			&& is_int( $data['expires_at'] )
-			&& $data['expires_at'] < time();
+			&& $data['expires_at'] <= $this->now();
+	}
+
+	/** Return the injected UTC epoch for deterministic expiry checks. */
+	private function now(): int {
+		return (int) call_user_func( $this->clock );
 	}
 
 	/** Delete a lock only if no owner changed its exact serialized value. */

@@ -131,14 +131,15 @@ final class SyncService {
 			$this->logs->finish( $log_id, 'success', $stats );
 			return new SyncResult( 'success', $stats, 'Schedule synchronization completed.' );
 		} catch ( Throwable $exception ) {
+			$rollback_failed = false;
 			if ( $started ) {
 				try {
-					$this->db->query( 'ROLLBACK' );
+					$rollback_failed = false === $this->db->query( 'ROLLBACK' );
 				} catch ( Throwable $ignored ) {
-					// Preserve the safe synchronization outcome if rollback reporting fails.
+					$rollback_failed = true;
 				}
 			}
-			return $this->record_failure( $log_id, $stats );
+			return $this->record_failure( $log_id, $stats, $rollback_failed );
 		}
 	}
 
@@ -232,7 +233,7 @@ final class SyncService {
 		$sector = null !== $existing ? $existing : new Settore();
 		$sector->idsettore = $remote;
 		$sector->eventoId = $event_id;
-		$sector->nome = $this->nullable_string( $data, 'nome' );
+		$sector->nome = $this->nullable_string( $data, 'settore' );
 		$sector->source = 'api';
 		$sector->syncActive = 1;
 		$sector->lastSeenSync = $token;
@@ -256,7 +257,7 @@ final class SyncService {
 		$price = null !== $existing ? $existing : new Prezzo();
 		$price->idprezzo = $remote;
 		$price->settoreId = $sector_id;
-		$price->nome = $this->nullable_string( $data, 'nome' );
+		$price->nome = $this->nullable_string( $data, 'prezzo' );
 		$price->tipo = $this->nullable_string( $data, 'tipo' );
 		$price->importo = $this->nullable_string( $data, 'importo' );
 		$price->prevendita = $this->nullable_string( $data, 'prevendita' );
@@ -410,10 +411,15 @@ final class SyncService {
 	}
 
 	/** Finish an existing log if possible and return an intentionally generic error. */
-	private function record_failure( ?int $log_id, array $stats ): SyncResult {
+	private function record_failure( ?int $log_id, array $stats, bool $rollback_failed = false ): SyncResult {
 		if ( null !== $log_id ) {
 			try {
-				$this->logs->finish( $log_id, 'error', $stats, 'Schedule synchronization failed.' );
+				$this->logs->finish(
+					$log_id,
+					'error',
+					$stats,
+					$rollback_failed ? 'Schedule synchronization rollback could not be confirmed.' : 'Schedule synchronization failed.'
+				);
 			} catch ( Throwable $ignored ) {
 				// Returning a safe error is more important than a secondary log failure.
 			}

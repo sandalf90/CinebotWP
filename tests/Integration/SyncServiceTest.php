@@ -38,40 +38,44 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		delete_option( 'cinebot_wp_sync_lock' );
 	}
 
-	/** Imports all hierarchy fields, poster data, counters, and a success log. */
+	/** Imports every authoritative hierarchy row, mapped source fields, and success log. */
 	public function test_imports_complete_fixture_and_records_success(): void {
 		$result = $this->service()->syncPayload( $this->fixture() );
 
 		self::assertTrue( $result->isSuccess() );
 		self::assertSame(
-			array( 'titoli_added' => 1, 'titoli_updated' => 0, 'eventi_added' => 1, 'eventi_updated' => 0 ),
+			array( 'titoli_added' => 17, 'titoli_updated' => 0, 'eventi_added' => 19, 'eventi_updated' => 0 ),
 			$result->stats()
 		);
 		$title = ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 );
 		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
 		self::assertSame( 'DONNE & UOMINI', $title->titolo );
 		self::assertSame( 'api', $title->source );
-		self::assertSame( 77, $title->frontendId );
+		self::assertSame( 50, $title->frontendId );
 		self::assertSame( 'https://ticket.cinebot.it/martinovich/titolo/491/locandina', $title->locandinaUrl );
 		self::assertSame( 'api', $event->source );
 		self::assertSame( 3, $event->stato );
-		self::assertSame( 'Teatro Comunale', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
+		self::assertSame( 'Cinema Martinovich', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
 		$sector = ( new SettoreRepository( self::$db ) )->findByEventoId( $event->id )[0];
-		self::assertSame( 'Platea', $sector->nome );
-		self::assertSame( '20.00', ( new PrezzoRepository( self::$db ) )->findBySettoreId( $sector->id )[0]->importo );
+		self::assertSame( 'Posto unico', $sector->nome );
+		$price = ( new PrezzoRepository( self::$db ) )->findBySettoreId( $sector->id )[0];
+		self::assertSame( 'Donne & Uomini INT ON', $price->nome );
+		self::assertSame( '22.00', $price->importo );
 		self::assertSame( 'success', ( new SyncLogRepository( self::$db ) )->latest()->status );
 	}
 
 	/** Re-importing canonical-equivalent input is idempotent and tracks no title update. */
 	public function test_identical_payload_is_idempotent_and_hash_is_key_order_invariant(): void {
 		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		$first_hash = ( new SyncLogRepository( self::$db ) )->latest()->payloadHash;
 		$payload = $this->fixture();
 		$payload['programmazione'][0]['titoli'][0] = array_reverse( $payload['programmazione'][0]['titoli'][0], true );
 		$result = $this->service()->syncPayload( $payload );
 
 		self::assertTrue( $result->isSuccess() );
 		self::assertSame( 0, $result->stats()['titoli_updated'] );
-		self::assertSame( 1, ( new TitoloRepository( self::$db ) )->count() );
+		self::assertSame( 17, ( new TitoloRepository( self::$db ) )->count() );
+		self::assertSame( $first_hash, ( new SyncLogRepository( self::$db ) )->latest()->payloadHash );
 	}
 
 	/** Invalid input creates no hierarchy rows and reports a safe error. */
@@ -87,17 +91,183 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertSame( 'error', ( new SyncLogRepository( self::$db ) )->latest()->status );
 	}
 
+	/** Top-level validation fails safely before creating a synchronization log. */
+	public function test_invalid_top_level_payload_returns_safe_error_without_log(): void {
+		foreach ( array( array( 'programmazione' => 'invalid' ), array( 'programmazione' => array( 'invalid-envelope' ) ) ) as $payload ) {
+			$result = $this->service()->syncPayload( $payload );
+
+			self::assertSame( 'error', $result->status() );
+			self::assertSame( 'Schedule synchronization failed.', $result->message() );
+			self::assertNull( ( new SyncLogRepository( self::$db ) )->latest() );
+		}
+	}
+
+	/** Changed API-owned title and event fields update exactly once. */
+	public function test_changed_api_rows_update_and_increment_stats(): void {
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'][0]['titolo'] = 'Updated API title';
+		$payload['programmazione'][0]['titoli'][0]['eventi'][0]['stato'] = 2;
+
+		$result = $this->service()->syncPayload( $payload );
+		self::assertSame( 1, $result->stats()['titoli_updated'] );
+		self::assertSame( 1, $result->stats()['eventi_updated'] );
+		self::assertSame( 'Updated API title', ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->titolo );
+		self::assertSame( 2, ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 )->stato );
+	}
+
+	/** API synchronization never overwrites a matching manual title or venue. */
+	public function test_manual_title_and_venue_remain_untouched(): void {
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		$title = ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 );
+		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'source' => 'manual', 'titolo' => 'Manual title' ), array( 'id' => $title->id ) );
+		self::$db->update( self::$db->prefix . 'cinebot_locali', array( 'source' => 'manual', 'nome' => 'Manual venue' ), array( 'id' => $event->localeId ) );
+
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		self::assertSame( 'Manual title', ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->titolo );
+		self::assertSame( 'Manual venue', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
+	}
+
+	/** Missing optional title and hierarchy arrays are accepted as empty arrays. */
+	public function test_missing_optional_arrays_are_treated_as_empty(): void {
+		$payload = $this->fixture();
+		$title = &$payload['programmazione'][0]['titoli'][0];
+		unset( $title['tag'], $title['cast'], $title['eventi'] );
+		unset( $payload['programmazione'][0]['titoli'][1]['eventi'][0]['settori'] );
+		unset( $payload['programmazione'][0]['titoli'][2]['eventi'][0]['settori'][0]['prezzi'] );
+		unset( $title );
+
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( array(), ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->tag );
+	}
+
+	/** Each disappearing API hierarchy level is deactivated and returns with its local ID. */
+	public function test_reconciliation_deactivates_and_reactivates_each_hierarchy_level(): void {
+		$payload = $this->fixture();
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		$title_repo = new TitoloRepository( self::$db );
+		$event_repo = new EventoRepository( self::$db );
+		$sector_repo = new SettoreRepository( self::$db );
+		$price_repo = new PrezzoRepository( self::$db );
+		$title = $title_repo->findByRemoteId( 491 );
+		$event = $event_repo->findByRemoteId( 2920 );
+		$sector = $sector_repo->findByEventoId( $event->id )[0];
+		$price = $price_repo->findBySettoreId( $sector->id )[0];
+
+		$without_price = $payload;
+		$without_price['programmazione'][0]['titoli'][0]['eventi'][0]['settori'][0]['prezzi'] = array();
+		self::assertTrue( $this->service()->syncPayload( $without_price )->isSuccess() );
+		self::assertSame( 0, $price_repo->findBySettoreId( $sector->id )[0]->syncActive );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( $price->id, $price_repo->findBySettoreId( $sector->id )[0]->id );
+		self::assertSame( 1, $price_repo->findBySettoreId( $sector->id )[0]->syncActive );
+
+		$without_sector = $payload;
+		$without_sector['programmazione'][0]['titoli'][0]['eventi'][0]['settori'] = array();
+		self::assertTrue( $this->service()->syncPayload( $without_sector )->isSuccess() );
+		self::assertSame( 0, $sector_repo->findByEventoId( $event->id )[0]->syncActive );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( $sector->id, $sector_repo->findByEventoId( $event->id )[0]->id );
+
+		$without_event = $payload;
+		$without_event['programmazione'][0]['titoli'][0]['eventi'] = array();
+		self::assertTrue( $this->service()->syncPayload( $without_event )->isSuccess() );
+		self::assertSame( 0, $event_repo->findByRemoteId( 2920 )->syncActive );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( $event->id, $event_repo->findByRemoteId( 2920 )->id );
+
+		$without_title = $payload;
+		array_shift( $without_title['programmazione'][0]['titoli'] );
+		self::assertTrue( $this->service()->syncPayload( $without_title )->isSuccess() );
+		self::assertSame( 0, $title_repo->findByRemoteId( 491 )->syncActive );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		self::assertSame( $title->id, $title_repo->findByRemoteId( 491 )->id );
+	}
+
+	/** A payload for another frontend cannot deactivate the first frontend's titles. */
+	public function test_frontend_reconciliation_is_isolated(): void {
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		$other = $this->fixture();
+		$other['programmazione'][0]['frontend'] = 51;
+		$other['programmazione'][0]['titoli'] = array( $other['programmazione'][0]['titoli'][0] );
+		$other['programmazione'][0]['titoli'][0]['idtitolo'] = 900491;
+		$other['programmazione'][0]['titoli'][0]['eventi'][0]['idevento'] = 902920;
+		$other['programmazione'][0]['titoli'][0]['eventi'][0]['localeId'] = 900001;
+
+		self::assertTrue( $this->service()->syncPayload( $other )->isSuccess() );
+		self::assertSame( 1, ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->syncActive );
+	}
+
+	/** Cache options survive a failed transaction and are removed only after commit. */
+	public function test_cache_is_deleted_only_after_successful_commit(): void {
+		set_transient( 'cinebot_prog_test', 'cached', HOUR_IN_SECONDS );
+		$invalid = $this->fixture();
+		$invalid['programmazione'][0]['titoli'][0]['eventi'][0]['idevento'] = 0;
+		self::assertSame( 'error', $this->service()->syncPayload( $invalid )->status() );
+		self::assertSame( 'cached', get_transient( 'cinebot_prog_test' ) );
+
+		self::assertTrue( $this->service()->syncPayload( $this->fixture() )->isSuccess() );
+		self::assertFalse( get_transient( 'cinebot_prog_test' ) );
+	}
+
+	/** Lock contention prevents sync from attempting an API request. */
+	public function test_lock_contention_returns_locked_before_api_call(): void {
+		$lock = new \CinebotWp\Services\SyncLock( self::$db );
+		$token = $lock->acquire();
+		$result = ( new SyncService( self::$db ) )->sync();
+		self::assertSame( 'locked', $result->status() );
+		self::assertTrue( $lock->release( $token ) );
+	}
+
+	/** A reported rollback failure remains safe and is recorded without database detail. */
+	public function test_rollback_query_failure_is_recorded_as_safe_error(): void {
+		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			public function query( $query ) {
+				$result = parent::query( $query );
+				return 'ROLLBACK' === $query ? false : $result;
+			}
+		};
+		$failing_db->set_prefix( self::$db->prefix );
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'][0]['eventi'][0]['idevento'] = 0;
+
+		try {
+			$result = $this->service( $failing_db )->syncPayload( $payload );
+			self::assertSame( 'error', $result->status() );
+			self::assertSame( 'Schedule synchronization failed.', $result->message() );
+			$log = ( new SyncLogRepository( self::$db ) )->latest();
+			self::assertSame( 'error', $log->status );
+			self::assertSame( 'Schedule synchronization rollback could not be confirmed.', $log->errorMessage );
+			self::assertStringNotContainsString( 'ROLLBACK', $log->errorMessage );
+		} finally {
+			$failing_db->close();
+		}
+	}
+
+	/** Safe result and history errors never expose caller-provided secret content. */
+	public function test_error_result_and_log_do_not_expose_payload_secrets(): void {
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'][0]['eventi'][0]['idevento'] = 'secret-api-password';
+		$result = $this->service()->syncPayload( $payload );
+		$log = ( new SyncLogRepository( self::$db ) )->latest();
+
+		self::assertStringNotContainsString( 'secret-api-password', $result->message() );
+		self::assertStringNotContainsString( 'secret-api-password', $log->errorMessage );
+	}
+
 	/** Build the service with its concrete repository collaborators. */
-	private function service(): SyncService {
+	private function service( ?wpdb $db = null ): SyncService {
+		$db = $db ?? self::$db;
 		return new SyncService(
-			self::$db,
+			$db,
 			null,
-			new TitoloRepository( self::$db ),
-			new EventoRepository( self::$db ),
-			new SettoreRepository( self::$db ),
-			new PrezzoRepository( self::$db ),
-			new LocaleRepository( self::$db ),
-			new SyncLogRepository( self::$db )
+			new TitoloRepository( $db ),
+			new EventoRepository( $db ),
+			new SettoreRepository( $db ),
+			new PrezzoRepository( $db ),
+			new LocaleRepository( $db ),
+			new SyncLogRepository( $db )
 		);
 	}
 
