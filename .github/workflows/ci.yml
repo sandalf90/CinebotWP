@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [feat/cinebot-wp, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} / WP ${{ matrix.wp }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - php: '7.4'
+            wp: '6.0.12'
+          - php: '8.0'
+            wp: '6.4.8'
+          - php: '8.1'
+            wp: '6.8.6'
+          - php: '8.2'
+            wp: '6.9.5'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        env:
+          PHP_VERSION: ${{ matrix.php }}
+          WP_VERSION: ${{ matrix.wp }}
+        run: docker compose build
+
+      - name: Install dependencies
+        run: docker compose run --rm php composer install
+
+      - name: Lint (WPCS)
+        run: docker compose run --rm php composer lint
+
+      - name: Static analysis (PHPStan)
+        run: docker compose run --rm php composer analyse
+
+      - name: Tests (PHPUnit)
+        run: docker compose run --rm php composer test
+
+      - name: Build artifact
+        run: docker compose run --rm php composer build
+
+      - name: Verify ZIP has no vendor
+        run: |
+          if docker compose run --rm php php -r "\$z=new ZipArchive(); \$z->open('dist/cinebot-wp.zip'); exit(\$z->locateName('cinebot-wp/vendor/autoload.php')===false?0:1);"; then
+            echo "ZIP is clean"
+          else
+            echo "ERROR: ZIP contains vendor/autoload.php"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        if: matrix.php == '8.2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinebot-wp-${{ matrix.wp }}.zip
+          path: dist/cinebot-wp.zip

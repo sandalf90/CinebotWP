@@ -1,0 +1,8 @@
+# Cinebot WP translation template (stub).
+# Generate the real .pot file with: wp i18n make-pot . languages/cinebot-wp.pot
+msgid ""
+msgstr ""
+"Project-Id-Version: Cinebot WP 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: it_IT\n"
