@@ -11,6 +11,7 @@ use CinebotWp\Plugin;
 use CinebotWp\Services\CronScheduler;
 use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
+use ReflectionClass;
 use WP_UnitTestCase;
 
 /** Verifies scheduled synchronization registration and lifecycle cleanup. */
@@ -25,6 +26,23 @@ final class CronSchedulerTest extends WP_UnitTestCase {
 		remove_all_actions( 'update_option_cinebot_wp_settings' );
 		remove_all_filters( 'cron_schedules' );
 		delete_option( 'cinebot_wp_settings' );
+	}
+
+	/** Restore bootstrapped plugin hooks and clear cron state after every test. */
+	public function tear_down(): void {
+		wp_clear_scheduled_hook( self::HOOK );
+		remove_all_actions( self::HOOK );
+		remove_all_actions( 'update_option_cinebot_wp_settings' );
+		remove_all_filters( 'cron_schedules' );
+		delete_option( 'cinebot_wp_settings' );
+
+		$plugin = Plugin::instance();
+		$booted = ( new ReflectionClass( Plugin::class ) )->getProperty( 'booted' );
+		$booted->setAccessible( true );
+		$booted->setValue( $plugin, false );
+		$plugin->boot();
+
+		parent::tear_down();
 	}
 
 	/** Registers the Cinebot weekly interval. */
