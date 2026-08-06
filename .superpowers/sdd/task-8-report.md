@@ -4,6 +4,7 @@
 
 - Implemented `ApiClient`, `ApiException`, and `LocandinaService` only.
 - Added focused unit coverage for authenticated API requests, response validation, safe failures, and poster URL construction.
+- Normalized settings and transport throwables to safe `ApiException` values and validate `programmazione` as a native JSON array before associative conversion.
 - Left existing coordinator, review, progress, execution-status, and state artifacts unchanged and unstaged.
 
 ## TDD And Verification
@@ -14,6 +15,7 @@
 - All Docker commands were blocked before test execution because the Docker Desktop Linux engine pipe was unavailable.
 - Host fallback checks confirmed that neither `php` nor `composer` is installed.
 - `git diff --check` completed without Task 8 whitespace errors.
+- Review-follow-up tests cover corrupted credentials, throwing transports, exact 10 MiB response boundaries, object-valued `programmazione`, DNS length limits, and encoded control bytes.
 
 ## Static Audit
 
@@ -23,7 +25,7 @@
 - Exceptions use fixed safe text and retain neither credentials, Authorization headers, URLs, upstream errors, nor response bodies.
 - HTTP status handling distinguishes 401 and stores only an optional numeric status.
 - Response bodies are bounded to 10 MiB before JSON decoding.
-- Top-level JSON must be an object with valid optional `status`/`error` fields and an array `programmazione` field.
+- Top-level JSON must be an object with valid optional `status`/`error` fields and a native JSON array `programmazione` field.
 - Poster hosts are restricted to normalized DNS names without schemes, userinfo, ports, paths, queries, fragments, localhost, or IP literals.
 - Poster paths reject empty/dot/traversal/control/scheme/delimiter inputs and encode each accepted segment independently.
 - No dependencies, persistence, synchronization, admin, cron, logging, or retry behavior was added.

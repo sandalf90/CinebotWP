@@ -11,6 +11,7 @@ use CinebotWp\Services\ApiClient;
 use CinebotWp\Services\ApiException;
 use CinebotWp\Services\SettingsService;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use WP_Error;
 
 /**
@@ -133,6 +134,38 @@ final class ApiClientTest extends TestCase {
 	}
 
 	/**
+	 * Verifies credential decryption failures become safe API failures before transport.
+	 */
+	public function test_tampered_password_throws_safe_api_exception_before_transport(): void {
+		$called                 = false;
+		$settings               = $this->settings();
+		$stored                 = get_option( self::SETTINGS_OPTION );
+		$encrypted              = $stored['api_password'];
+		$payload                = base64_decode( $encrypted, true );
+		$last                   = strlen( $payload ) - 1;
+		$payload[ $last ]       = chr( ord( $payload[ $last ] ) ^ 1 );
+		$stored['api_password'] = base64_encode( $payload );
+		update_option( self::SETTINGS_OPTION, $stored );
+		$client = new ApiClient(
+			$settings,
+			static function () use ( &$called ): array {
+				$called = true;
+
+				return self::response( 200, '{"programmazione":[]}' );
+			}
+		);
+
+		try {
+			$client->fetchProgrammazione();
+			self::fail( 'Expected safe settings failure.' );
+		} catch ( ApiException $exception ) {
+			self::assertSame( 'Unable to prepare the Cinebot API request.', $exception->getMessage() );
+			$this->assert_message_excludes( $exception, array( $encrypted, $stored['api_password'], self::PASSWORD ) );
+		}
+		self::assertFalse( $called );
+	}
+
+	/**
 	 * Verifies network details and request URLs are not disclosed.
 	 */
 	public function test_wp_error_throws_safe_network_exception(): void {
@@ -165,6 +198,48 @@ final class ApiClientTest extends TestCase {
 			},
 			array( 'transport-result-secret', self::PASSWORD )
 		);
+	}
+
+	/**
+	 * Verifies thrown transport details are normalized to a fixed safe failure.
+	 */
+	public function test_throwing_transport_throws_safe_api_exception(): void {
+		$upstream = 'transport exception secret https://private.example.test?token=secret';
+		$client   = new ApiClient(
+			$this->settings(),
+			static function () use ( $upstream ): void {
+				throw new RuntimeException( $upstream );
+			}
+		);
+
+		try {
+			$client->fetchProgrammazione();
+			self::fail( 'Expected safe transport failure.' );
+		} catch ( ApiException $exception ) {
+			self::assertSame( 'Unable to connect to the Cinebot API.', $exception->getMessage() );
+			$this->assert_message_excludes( $exception, array( $upstream, self::PASSWORD ) );
+		}
+	}
+
+	/**
+	 * Verifies transport ApiExceptions retain their safe status semantics.
+	 */
+	public function test_transport_api_exception_is_preserved(): void {
+		$expected = new ApiException( 'Safe transport status.', 429 );
+		$client   = new ApiClient(
+			$this->settings(),
+			static function () use ( $expected ): void {
+				throw $expected;
+			}
+		);
+
+		try {
+			$client->fetchProgrammazione();
+			self::fail( 'Expected transport API exception.' );
+		} catch ( ApiException $exception ) {
+			self::assertSame( $expected, $exception );
+			self::assertSame( 429, $exception->status() );
+		}
 	}
 
 	/**
@@ -231,18 +306,57 @@ final class ApiClientTest extends TestCase {
 	}
 
 	/**
-	 * Verifies the response body is bounded before JSON decoding.
+	 * Verifies a valid response exactly at the body limit is accepted.
 	 */
-	public function test_oversized_body_throws_safe_exception(): void {
-		$marker = 'oversized-body-secret';
-		$body   = '{"programmazione":[]}' . $marker . str_repeat( 'x', 10 * 1024 * 1024 );
+	public function test_body_exactly_at_limit_is_accepted(): void {
+		$body   = $this->validBodyAtSize( 10 * 1024 * 1024 );
+		$client = $this->clientReturning( self::response( 200, $body ) );
+
+		self::assertSame( 10 * 1024 * 1024, strlen( $body ) );
+		self::assertSame( array(), $client->fetchProgrammazione()['programmazione'] );
+	}
+
+	/**
+	 * Verifies a valid response one byte above the body limit is rejected.
+	 */
+	public function test_body_one_byte_over_limit_throws_safe_exception(): void {
+		$body   = $this->validBodyAtSize( ( 10 * 1024 * 1024 ) + 1 );
+		$client = $this->clientReturning( self::response( 200, $body ) );
+
+		self::assertSame( ( 10 * 1024 * 1024 ) + 1, strlen( $body ) );
+		$this->assert_safe_api_exception(
+			static function () use ( $client ): void {
+				$client->fetchProgrammazione();
+			},
+			array( self::PASSWORD )
+		);
+	}
+
+	/**
+	 * Provides JSON object values that are invalid programming arrays.
+	 *
+	 * @return array<string,array{0:string}>
+	 */
+	public function object_programmazione_bodies(): array {
+		return array(
+			'empty object'     => array( '{"programmazione":{}}' ),
+			'non-empty object' => array( '{"programmazione":{"frontend":50}}' ),
+		);
+	}
+
+	/**
+	 * Verifies JSON objects are rejected before associative conversion.
+	 *
+	 * @dataProvider object_programmazione_bodies
+	 */
+	public function test_object_programmazione_throws_safe_exception( string $body ): void {
 		$client = $this->clientReturning( self::response( 200, $body ) );
 
 		$this->assert_safe_api_exception(
 			static function () use ( $client ): void {
 				$client->fetchProgrammazione();
 			},
-			array( $marker, self::PASSWORD )
+			array( $body, self::PASSWORD )
 		);
 	}
 
@@ -360,6 +474,16 @@ final class ApiClientTest extends TestCase {
 			),
 			'body'     => $body,
 		);
+	}
+
+	/**
+	 * Builds valid JSON at an exact byte size.
+	 */
+	private function validBodyAtSize( int $size ): string {
+		$prefix = '{"programmazione":[],"padding":"';
+		$suffix = '"}';
+
+		return $prefix . str_repeat( 'x', $size - strlen( $prefix ) - strlen( $suffix ) ) . $suffix;
 	}
 
 	/**

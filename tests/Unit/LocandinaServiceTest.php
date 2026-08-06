@@ -84,6 +84,34 @@ final class LocandinaServiceTest extends TestCase {
 	}
 
 	/**
+	 * Verifies the maximum DNS label length is accepted.
+	 */
+	public function test_build_accepts_63_byte_dns_label(): void {
+		$host = str_repeat( 'a', 63 ) . '.example';
+
+		self::assertSame(
+			'https://' . $host . '/poster/titolo/491/locandina',
+			( new LocandinaService() )->build( $host, 'poster', 491, 1 )
+		);
+	}
+
+	/**
+	 * Verifies the maximum total DNS host length is accepted.
+	 */
+	public function test_build_accepts_253_byte_dns_host(): void {
+		$host = str_repeat( 'a', 63 ) . '.'
+			. str_repeat( 'b', 63 ) . '.'
+			. str_repeat( 'c', 63 ) . '.'
+			. str_repeat( 'd', 61 );
+
+		self::assertSame( 253, strlen( $host ) );
+		self::assertSame(
+			'https://' . $host . '/poster/titolo/491/locandina',
+			( new LocandinaService() )->build( $host, 'poster', 491, 1 )
+		);
+	}
+
+	/**
 	 * Provides invalid positive title identifiers.
 	 *
 	 * @return array<string,array{0:int}>
@@ -113,6 +141,11 @@ final class LocandinaServiceTest extends TestCase {
 	 * @return array<string,array{0:string}>
 	 */
 	public function invalid_hosts(): array {
+		$host_254 = str_repeat( 'a', 63 ) . '.'
+			. str_repeat( 'b', 63 ) . '.'
+			. str_repeat( 'c', 63 ) . '.'
+			. str_repeat( 'd', 62 );
+
 		return array(
 			'empty'              => array( '' ),
 			'HTTPS scheme'       => array( 'https://ticket.cinebot.it' ),
@@ -133,6 +166,8 @@ final class LocandinaServiceTest extends TestCase {
 			'trailing dot'       => array( 'ticket.cinebot.it.' ),
 			'space'              => array( 'ticket cinebot.it' ),
 			'control character'  => array( "ticket.cinebot.it\n" ),
+			'64-byte label'      => array( str_repeat( 'a', 64 ) . '.example' ),
+			'254-byte host'      => array( $host_254 ),
 		);
 	}
 
@@ -177,6 +212,9 @@ final class LocandinaServiceTest extends TestCase {
 			'encoded fragment'  => array( 'cinema%23secret/poster' ),
 			'encoded slash'     => array( 'cinema%2fsecret/poster' ),
 			'encoded backslash' => array( 'cinema%5csecret/poster' ),
+			'encoded null'      => array( 'cinema%00secret/poster' ),
+			'encoded unit sep'  => array( 'cinema%1fsecret/poster' ),
+			'encoded delete'    => array( 'cinema%7fsecret/poster' ),
 		);
 	}
 

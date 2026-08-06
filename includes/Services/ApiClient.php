@@ -7,6 +7,7 @@
 
 namespace CinebotWp\Services;
 
+use Throwable;
 use WP_Error;
 
 /**
@@ -39,31 +40,42 @@ final class ApiClient {
 	 * @throws ApiException When credentials, transport, or response data are invalid.
 	 */
 	public function fetchProgrammazione(): array {
-		$username = $this->settings->username();
-		$password = $this->settings->password();
+		try {
+			$username = $this->settings->username();
+			$password = $this->settings->password();
+			$base_url = $this->settings->baseUrl();
+			$frontend = $this->settings->frontend();
+		} catch ( Throwable $exception ) {
+			throw new ApiException( 'Unable to prepare the Cinebot API request.' );
+		}
 		if ( '' === $username || '' === $password ) {
 			throw new ApiException( 'API credentials are not configured.' );
 		}
 
-		$url      = rtrim( $this->settings->baseUrl(), '/' ) . '/v1/programmazione';
-		$frontend = $this->settings->frontend();
+		$url = rtrim( $base_url, '/' ) . '/v1/programmazione';
 		if ( null !== $frontend ) {
 			$url .= '/' . $frontend;
 		}
 
-		$response = call_user_func(
-			$this->http_get,
-			$url,
-			array(
-				'headers'            => array(
-					'Authorization' => 'Basic ' . base64_encode( $username . ':' . $password ),
-					'Accept'        => 'application/json',
-				),
-				'timeout'            => 60,
-				'redirection'        => 3,
-				'reject_unsafe_urls' => true,
-			)
-		);
+		try {
+			$response = call_user_func(
+				$this->http_get,
+				$url,
+				array(
+					'headers'            => array(
+						'Authorization' => 'Basic ' . base64_encode( $username . ':' . $password ),
+						'Accept'        => 'application/json',
+					),
+					'timeout'            => 60,
+					'redirection'        => 3,
+					'reject_unsafe_urls' => true,
+				)
+			);
+		} catch ( ApiException $exception ) {
+			throw $exception;
+		} catch ( Throwable $exception ) {
+			throw new ApiException( 'Unable to connect to the Cinebot API.' );
+		}
 
 		if ( $response instanceof WP_Error ) {
 			throw new ApiException( 'Unable to connect to the Cinebot API.' );
@@ -88,6 +100,9 @@ final class ApiClient {
 		$object = json_decode( $body );
 		if ( JSON_ERROR_NONE !== json_last_error() || ! is_object( $object ) ) {
 			throw new ApiException( 'Cinebot API response is invalid.' );
+		}
+		if ( ! isset( $object->programmazione ) || ! is_array( $object->programmazione ) ) {
+			throw new ApiException( 'Cinebot API programming data is invalid.' );
 		}
 
 		$payload = json_decode( $body, true );
