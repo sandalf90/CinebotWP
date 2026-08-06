@@ -8,6 +8,9 @@
 namespace CinebotWp;
 
 use CinebotWp\Database\SchemaInstaller;
+use CinebotWp\Services\CronScheduler;
+use CinebotWp\Services\SettingsService;
+use CinebotWp\Services\SyncService;
 
 final class Plugin {
 	/**
@@ -42,13 +45,16 @@ final class Plugin {
 		global $wpdb;
 
 		( new SchemaInstaller( $wpdb ) )->install();
+		$scheduler = self::scheduler();
+		$scheduler->register();
+		$scheduler->schedule();
 	}
 
 	/**
 	 * Stop scheduled synchronization on deactivation.
 	 */
 	public static function deactivate(): void {
-		wp_clear_scheduled_hook( 'cinebot_wp_sync_event' );
+		self::scheduler()->clear();
 	}
 
 	/**
@@ -60,7 +66,15 @@ final class Plugin {
 		}
 
 		$this->booted = true;
+		self::scheduler()->register();
 		do_action( 'cinebot_wp_booted' );
+	}
+
+	/** Compose the synchronization scheduler at the plugin boundary. */
+	private static function scheduler(): CronScheduler {
+		global $wpdb;
+
+		return new CronScheduler( new SettingsService(), new SyncService( $wpdb ) );
 	}
 
 	/**
