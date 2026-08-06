@@ -154,6 +154,13 @@ final class TipologiaRepository {
 	}
 
 	/**
+	 * Find an event type by local ID.
+	 */
+	public function find( int $id ): ?TipologiaEvento {
+		return $this->findById( $id );
+	}
+
+	/**
 	 * Find an event type by local ID for mutation validation.
 	 */
 	private function findById( int $id ): ?TipologiaEvento {

@@ -9,6 +9,10 @@ namespace CinebotWp\Admin;
 
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\LocaliListPage;
+use CinebotWp\Admin\Pages\LocaleEditPage;
+use CinebotWp\Admin\Pages\TipologieListPage;
+use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 
@@ -28,14 +32,39 @@ final class AdminMenu {
 	/** @var TitoloEditPage */
 	private $edit_page;
 
+	/** @var LocaliListPage */
+	private $locali_page;
+
+	/** @var LocaleEditPage */
+	private $locale_edit;
+
+	/** @var TipologieListPage */
+	private $tipologie_page;
+
+	/** @var TipologiaEditPage */
+	private $tipologia_edit;
+
 	/**
 	 * Store the page collaborators.
 	 */
-	public function __construct( DashboardPage $dashboard, ApiPage $api_page, TitoliListPage $titoli_page, TitoloEditPage $edit_page ) {
-		$this->dashboard   = $dashboard;
-		$this->api_page    = $api_page;
-		$this->titoli_page = $titoli_page;
-		$this->edit_page   = $edit_page;
+	public function __construct(
+		DashboardPage $dashboard,
+		ApiPage $api_page,
+		TitoliListPage $titoli_page,
+		TitoloEditPage $edit_page,
+		LocaliListPage $locali_page,
+		LocaleEditPage $locale_edit,
+		TipologieListPage $tipologie_page,
+		TipologiaEditPage $tipologia_edit
+	) {
+		$this->dashboard      = $dashboard;
+		$this->api_page       = $api_page;
+		$this->titoli_page    = $titoli_page;
+		$this->edit_page      = $edit_page;
+		$this->locali_page    = $locali_page;
+		$this->locale_edit    = $locale_edit;
+		$this->tipologie_page = $tipologie_page;
+		$this->tipologia_edit = $tipologia_edit;
 	}
 
 	/** Register the top-level menu, API submenu, and AJAX handlers. */
@@ -44,6 +73,9 @@ final class AdminMenu {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_cinebot_wp_save_api', array( $this->api_page, 'save' ) );
 		add_action( 'admin_post_cinebot_wp_save_titolo', array( $this->edit_page, 'save' ) );
+		add_action( 'admin_post_cinebot_wp_save_locale', array( $this->locale_edit, 'save' ) );
+		add_action( 'admin_post_cinebot_wp_save_tipologia', array( $this->tipologia_edit, 'save' ) );
+		add_action( 'admin_post_cinebot_toggle_tipologia', array( $this->tipologie_page, 'toggleActive' ) );
 		add_action( 'wp_ajax_cinebot_wp_test_connection', array( $this->api_page, 'testConnection' ) );
 		add_action( 'wp_ajax_cinebot_wp_sync_now', array( $this->api_page, 'syncNow' ) );
 	}
@@ -96,6 +128,42 @@ final class AdminMenu {
 			$capability,
 			'cinebot-wp-programmazione-edit',
 			array( $this->edit_page, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Locali', 'cinebot-wp' ),
+			__( 'Locali', 'cinebot-wp' ),
+			$capability,
+			'cinebot-wp-locali',
+			array( $this->locali_page, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Edit Locale', 'cinebot-wp' ),
+			'',
+			$capability,
+			'cinebot-wp-locale-edit',
+			array( $this->locale_edit, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Tipologie evento', 'cinebot-wp' ),
+			__( 'Tipologie', 'cinebot-wp' ),
+			$capability,
+			'cinebot-wp-tipologie',
+			array( $this->tipologie_page, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Edit Tipologia', 'cinebot-wp' ),
+			'',
+			$capability,
+			'cinebot-wp-tipologia-edit',
+			array( $this->tipologia_edit, 'render' )
 		);
 	}
 

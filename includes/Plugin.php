@@ -10,6 +10,10 @@ namespace CinebotWp;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\LocaliListPage;
+use CinebotWp\Admin\Pages\LocaleEditPage;
+use CinebotWp\Admin\Pages\TipologieListPage;
+use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
@@ -99,28 +103,41 @@ final class Plugin {
 		$api       = new ApiClient( $settings );
 		$scheduler = new CronScheduler( $settings, new SyncService( $wpdb, $api ) );
 
+		$titoli_repo  = new TitoloRepository( $wpdb );
+		$locale_repo  = new LocaleRepository( $wpdb );
+		$tipo_repo    = new TipologiaRepository( $wpdb );
+
 		$titoli_page = new TitoliListPage(
-			new TitoloRepository( $wpdb ),
+			$titoli_repo,
 			new EventoRepository( $wpdb ),
 			new SettoreRepository( $wpdb ),
 			new PrezzoRepository( $wpdb ),
-			new TipologiaRepository( $wpdb )
+			$tipo_repo
 		);
 
 		$edit_page = new TitoloEditPage(
-			new TitoloRepository( $wpdb ),
+			$titoli_repo,
 			new EventoRepository( $wpdb ),
 			new SettoreRepository( $wpdb ),
 			new PrezzoRepository( $wpdb ),
-			new TipologiaRepository( $wpdb ),
-			new LocaleRepository( $wpdb )
+			$tipo_repo,
+			$locale_repo
 		);
+
+		$locali_page = new LocaliListPage( $locale_repo, $titoli_repo );
+		$locale_edit = new LocaleEditPage( $locale_repo );
+		$tipologie_page = new TipologieListPage( $tipo_repo );
+		$tipologia_edit = new TipologiaEditPage( $tipo_repo );
 
 		return new AdminMenu(
 			new DashboardPage( $settings ),
 			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) ),
 			$titoli_page,
-			$edit_page
+			$edit_page,
+			$locali_page,
+			$locale_edit,
+			$tipologie_page,
+			$tipologia_edit
 		);
 	}
 
