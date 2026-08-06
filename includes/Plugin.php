@@ -7,7 +7,11 @@
 
 namespace CinebotWp;
 
+use CinebotWp\Admin\AdminMenu;
+use CinebotWp\Admin\Pages\ApiPage;
+use CinebotWp\Admin\Pages\DashboardPage;
 use CinebotWp\Database\SchemaInstaller;
+use CinebotWp\Services\ApiClient;
 use CinebotWp\Services\CronScheduler;
 use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
@@ -67,6 +71,7 @@ final class Plugin {
 
 		$this->booted = true;
 		self::scheduler()->register();
+		self::admin_menu()->register();
 		do_action( 'cinebot_wp_booted' );
 	}
 
@@ -75,6 +80,19 @@ final class Plugin {
 		global $wpdb;
 
 		return new CronScheduler( new SettingsService(), new SyncService( $wpdb ) );
+	}
+
+	/** Compose the admin menu at the plugin boundary. */
+	private static function admin_menu(): AdminMenu {
+		global $wpdb;
+
+		$settings = new SettingsService();
+		$scheduler = new CronScheduler( $settings, new SyncService( $wpdb ) );
+
+		return new AdminMenu(
+			new DashboardPage( $settings ),
+			new ApiPage( $settings, $scheduler, new SyncService( $wpdb ) )
+		);
 	}
 
 	/**
