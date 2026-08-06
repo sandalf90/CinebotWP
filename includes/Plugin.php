@@ -12,6 +12,7 @@ use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
 use CinebotWp\Admin\Pages\LocaliListPage;
 use CinebotWp\Admin\Pages\LocaleEditPage;
+use CinebotWp\Admin\Pages\SyncLogPage;
 use CinebotWp\Admin\Pages\TipologieListPage;
 use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Admin\Pages\TitoloEditPage;
@@ -21,6 +22,7 @@ use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\PrezzoRepository;
 use CinebotWp\Repositories\SettoreRepository;
+use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\ApiClient;
@@ -128,16 +130,21 @@ final class Plugin {
 		$locale_edit = new LocaleEditPage( $locale_repo );
 		$tipologie_page = new TipologieListPage( $tipo_repo );
 		$tipologia_edit = new TipologiaEditPage( $tipo_repo );
+		$log_repo = new SyncLogRepository( $wpdb );
+		$log_page = new SyncLogPage( $log_repo );
+
+		$dashboard = new DashboardPage( $settings, $titoli_repo, $log_repo );
 
 		return new AdminMenu(
-			new DashboardPage( $settings ),
+			$dashboard,
 			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) ),
 			$titoli_page,
 			$edit_page,
 			$locali_page,
 			$locale_edit,
 			$tipologie_page,
-			$tipologia_edit
+			$tipologia_edit,
+			$log_page
 		);
 	}
 

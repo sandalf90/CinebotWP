@@ -11,6 +11,7 @@ use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
 use CinebotWp\Admin\Pages\LocaliListPage;
 use CinebotWp\Admin\Pages\LocaleEditPage;
+use CinebotWp\Admin\Pages\SyncLogPage;
 use CinebotWp\Admin\Pages\TipologieListPage;
 use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Admin\Pages\TitoloEditPage;
@@ -44,6 +45,9 @@ final class AdminMenu {
 	/** @var TipologiaEditPage */
 	private $tipologia_edit;
 
+	/** @var SyncLogPage */
+	private $log_page;
+
 	/**
 	 * Store the page collaborators.
 	 */
@@ -55,7 +59,8 @@ final class AdminMenu {
 		LocaliListPage $locali_page,
 		LocaleEditPage $locale_edit,
 		TipologieListPage $tipologie_page,
-		TipologiaEditPage $tipologia_edit
+		TipologiaEditPage $tipologia_edit,
+		SyncLogPage $log_page
 	) {
 		$this->dashboard      = $dashboard;
 		$this->api_page       = $api_page;
@@ -65,6 +70,7 @@ final class AdminMenu {
 		$this->locale_edit    = $locale_edit;
 		$this->tipologie_page = $tipologie_page;
 		$this->tipologia_edit = $tipologia_edit;
+		$this->log_page       = $log_page;
 	}
 
 	/** Register the top-level menu, API submenu, and AJAX handlers. */
@@ -76,6 +82,7 @@ final class AdminMenu {
 		add_action( 'admin_post_cinebot_wp_save_locale', array( $this->locale_edit, 'save' ) );
 		add_action( 'admin_post_cinebot_wp_save_tipologia', array( $this->tipologia_edit, 'save' ) );
 		add_action( 'admin_post_cinebot_toggle_tipologia', array( $this->tipologie_page, 'toggleActive' ) );
+		add_action( 'admin_post_cinebot_cleanup_logs', array( $this->log_page, 'deleteOld' ) );
 		add_action( 'wp_ajax_cinebot_wp_test_connection', array( $this->api_page, 'testConnection' ) );
 		add_action( 'wp_ajax_cinebot_wp_sync_now', array( $this->api_page, 'syncNow' ) );
 	}
@@ -164,6 +171,15 @@ final class AdminMenu {
 			$capability,
 			'cinebot-wp-tipologia-edit',
 			array( $this->tipologia_edit, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Log sincronizzazioni', 'cinebot-wp' ),
+			__( 'Log', 'cinebot-wp' ),
+			$capability,
+			'cinebot-wp-log',
+			array( $this->log_page, 'render' )
 		);
 	}
 
