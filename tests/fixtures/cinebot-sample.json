@@ -1,0 +1,62 @@
+{
+  "programmazione": [
+    {
+      "frontend": 77,
+      "host": "ticket.cinebot.it",
+      "path": "martinovich",
+      "titoli": [
+        {
+          "idtitolo": 491,
+          "titolo": "DONNE & UOMINI",
+          "autore": "Autore API",
+          "esecutore": "Compagnia API",
+          "durata": 105,
+          "scadenza": 1,
+          "descrizione": "Descrizione API",
+          "tipoevento": "45",
+          "locandina": 1,
+          "cinetel": "CINETEL-491",
+          "tmdb": "TMDB-491",
+          "trailer": "https://video.example.test/trailer/491",
+          "cast": "Cast API",
+          "tag": ["teatro", "commedia"],
+          "eventi": [
+            {
+              "idevento": 2920,
+              "inizio": "2030-10-01 21:00:00",
+              "organizzatoreId": 90,
+              "organizzatoreCf": "RSSMRA80A01H501U",
+              "stato": 3,
+              "otp": 1,
+              "controlloaccessi": 1,
+              "mappa": 12,
+              "localeId": 321,
+              "locale": "Teatro Comunale",
+              "localeCodice": "TC-BASSANO",
+              "indirizzo": "Piazza Liberta 1",
+              "cap": "36061",
+              "comune": "Bassano del Grappa",
+              "provincia": "VI",
+              "settori": [
+                {
+                  "idsettore": 401,
+                  "nome": "Platea",
+                  "prezzi": [
+                    {
+                      "idprezzo": 501,
+                      "nome": "Intero",
+                      "tipo": "INT",
+                      "importo": "20.00",
+                      "prevendita": "1.50",
+                      "stato": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
