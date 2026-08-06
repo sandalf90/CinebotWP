@@ -38,7 +38,7 @@ final class DashboardPage {
 
 		$next_label = $next_sync
 			? esc_html( gmdate( 'Y-m-d H:i', (int) $next_sync ) . ' UTC' )
-			: __( 'Not scheduled', 'cinebot-wp' );
+			: esc_html__( 'Not scheduled', 'cinebot-wp' );
 
 		?>
 		<div class="wrap cinebot-dashboard">
@@ -54,7 +54,7 @@ final class DashboardPage {
 				</p>
 				<p>
 					<strong><?php esc_html_e( 'Next sync:', 'cinebot-wp' ); ?></strong>
-					<?php echo $next_label; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above. ?>
+					<?php echo $next_label; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- both branches escaped above. ?>
 				</p>
 				<p>
 					<a href="<?php echo esc_url( $api_url ); ?>" class="button button-primary">

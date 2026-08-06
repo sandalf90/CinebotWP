@@ -79,19 +79,21 @@ final class Plugin {
 	private static function scheduler(): CronScheduler {
 		global $wpdb;
 
-		return new CronScheduler( new SettingsService(), new SyncService( $wpdb ) );
+		$settings = new SettingsService();
+		return new CronScheduler( $settings, new SyncService( $wpdb, new ApiClient( $settings ) ) );
 	}
 
 	/** Compose the admin menu at the plugin boundary. */
 	private static function admin_menu(): AdminMenu {
 		global $wpdb;
 
-		$settings = new SettingsService();
-		$scheduler = new CronScheduler( $settings, new SyncService( $wpdb ) );
+		$settings  = new SettingsService();
+		$api       = new ApiClient( $settings );
+		$scheduler = new CronScheduler( $settings, new SyncService( $wpdb, $api ) );
 
 		return new AdminMenu(
 			new DashboardPage( $settings ),
-			new ApiPage( $settings, $scheduler, new SyncService( $wpdb ) )
+			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) )
 		);
 	}
 

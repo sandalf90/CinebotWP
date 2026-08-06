@@ -28,10 +28,13 @@ final class AdminMenu {
 		$this->api_page  = $api_page;
 	}
 
-	/** Register the top-level menu and API submenu on admin_menu. */
+	/** Register the top-level menu, API submenu, and AJAX handlers. */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'admin_post_cinebot_wp_save_api', array( $this->api_page, 'save' ) );
+		add_action( 'wp_ajax_cinebot_wp_test_connection', array( $this->api_page, 'testConnection' ) );
+		add_action( 'wp_ajax_cinebot_wp_sync_now', array( $this->api_page, 'syncNow' ) );
 	}
 
 	/** Add the top-level Cinebot menu with Dashboard and API submenus. */
@@ -65,10 +68,6 @@ final class AdminMenu {
 			'cinebot-wp-api',
 			array( $this->api_page, 'render' )
 		);
-
-		add_action( 'admin_post_cinebot_wp_save_api', array( $this->api_page, 'save' ) );
-		add_action( 'wp_ajax_cinebot_wp_test_connection', array( $this->api_page, 'testConnection' ) );
-		add_action( 'wp_ajax_cinebot_wp_sync_now', array( $this->api_page, 'syncNow' ) );
 	}
 
 	/** Enqueue admin assets only on Cinebot screens. */

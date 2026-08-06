@@ -12,7 +12,7 @@
 		statusEl.className = 'cinebot-ajax-status' + ( isError ? ' error' : ' success' );
 	}
 
-	function postAjax( action, callback ) {
+	function postAjax( action, callback, button ) {
 		var formData = new FormData();
 		formData.append( 'action', action );
 		formData.append( 'nonce', window.cinebotAdmin ? window.cinebotAdmin.nonce : '' );
@@ -23,7 +23,14 @@
 		} )
 			.then( function ( response ) { return response.json(); } )
 			.then( callback )
-			.catch( function () { showStatus( window.cinebotAdmin.i18n.error, true ); } );
+			.catch( function () {
+				showStatus( window.cinebotAdmin.i18n.error, true );
+			} )
+			.finally( function () {
+				if ( button ) {
+					button.disabled = false;
+				}
+			} );
 	}
 
 	var testBtn = document.getElementById( 'cinebot-test-connection' );
@@ -32,14 +39,13 @@
 			testBtn.disabled = true;
 			showStatus( window.cinebotAdmin.i18n.testing, false );
 			postAjax( 'cinebot_wp_test_connection', function ( data ) {
-				testBtn.disabled = false;
 				if ( data.success ) {
 					var count = data.data.titoli_count || 0;
 					showStatus( window.cinebotAdmin.i18n.success + ': ' + count + ' titoli', false );
 				} else {
 					showStatus( data.data.message || window.cinebotAdmin.i18n.error, true );
 				}
-			} );
+			}, testBtn );
 		} );
 	}
 
@@ -49,7 +55,6 @@
 			syncBtn.disabled = true;
 			showStatus( window.cinebotAdmin.i18n.syncing, false );
 			postAjax( 'cinebot_wp_sync_now', function ( data ) {
-				syncBtn.disabled = false;
 				if ( data.success ) {
 					var stats = data.data.stats || {};
 					var msg = window.cinebotAdmin.i18n.success +
@@ -60,7 +65,7 @@
 				} else {
 					showStatus( data.data.message || window.cinebotAdmin.i18n.error, true );
 				}
-			} );
+			}, syncBtn );
 		} );
 	}
 } )();
