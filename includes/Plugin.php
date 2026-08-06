@@ -10,7 +10,13 @@ namespace CinebotWp;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
+use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\PrezzoRepository;
+use CinebotWp\Repositories\SettoreRepository;
+use CinebotWp\Repositories\TipologiaRepository;
+use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\ApiClient;
 use CinebotWp\Services\CronScheduler;
 use CinebotWp\Services\SettingsService;
@@ -91,9 +97,18 @@ final class Plugin {
 		$api       = new ApiClient( $settings );
 		$scheduler = new CronScheduler( $settings, new SyncService( $wpdb, $api ) );
 
+		$titoli_page = new TitoliListPage(
+			new TitoloRepository( $wpdb ),
+			new EventoRepository( $wpdb ),
+			new SettoreRepository( $wpdb ),
+			new PrezzoRepository( $wpdb ),
+			new TipologiaRepository( $wpdb )
+		);
+
 		return new AdminMenu(
 			new DashboardPage( $settings ),
-			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) )
+			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) ),
+			$titoli_page
 		);
 	}
 

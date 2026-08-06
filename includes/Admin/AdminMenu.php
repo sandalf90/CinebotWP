@@ -9,6 +9,7 @@ namespace CinebotWp\Admin;
 
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoliListPage;
 
 /**
  * Registers the Cinebot admin menu and page routes.
@@ -20,12 +21,16 @@ final class AdminMenu {
 	/** @var ApiPage */
 	private $api_page;
 
+	/** @var TitoliListPage */
+	private $titoli_page;
+
 	/**
 	 * Store the page collaborators.
 	 */
-	public function __construct( DashboardPage $dashboard, ApiPage $api_page ) {
-		$this->dashboard = $dashboard;
-		$this->api_page  = $api_page;
+	public function __construct( DashboardPage $dashboard, ApiPage $api_page, TitoliListPage $titoli_page ) {
+		$this->dashboard   = $dashboard;
+		$this->api_page    = $api_page;
+		$this->titoli_page = $titoli_page;
 	}
 
 	/** Register the top-level menu, API submenu, and AJAX handlers. */
@@ -67,6 +72,15 @@ final class AdminMenu {
 			$capability,
 			'cinebot-wp-api',
 			array( $this->api_page, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Programmazioni', 'cinebot-wp' ),
+			__( 'Programmazioni', 'cinebot-wp' ),
+			$capability,
+			'cinebot-wp-programmazioni',
+			array( $this->titoli_page, 'render' )
 		);
 	}
 

@@ -4,6 +4,6 @@ phase: build-ready
 active_plan: docs/superpowers/plans/2026-08-02-cinebot-wp-plugin.md
 plan_audit: specs/PLAN-AUDIT.md
 active_flow: implement_plan
-active_task: 1
+active_task: 13
 metrics:
   story_start: 2026-08-05T07:10:15.7775646+02:00

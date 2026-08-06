@@ -10,6 +10,12 @@ namespace CinebotWp\Tests\Integration;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoliListPage;
+use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\PrezzoRepository;
+use CinebotWp\Repositories\SettoreRepository;
+use CinebotWp\Repositories\TipologiaRepository;
+use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
 use WP_UnitTestCase;
@@ -30,11 +36,20 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 	/** @var DashboardPage */
 	private $dashboard_page;
 
+	/** @var TitoliListPage */
+	private $titoli_page;
+
 	/** Set up page collaborators with isolated settings. */
 	public function set_up(): void {
 		parent::set_up();
 		delete_option( 'cinebot_wp_settings' );
 		delete_option( 'cinebot_wp_encryption_salt' );
+
+		if ( ! function_exists( 'set_current_screen' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/admin.php';
+		}
+		set_current_screen( 'toplevel_page_cinebot-wp' );
+
 		$this->settings_service = new SettingsService();
 		$this->sync_service     = new SyncService( $GLOBALS['wpdb'] );
 		$this->api_page         = new ApiPage(
@@ -43,6 +58,15 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			$this->sync_service
 		);
 		$this->dashboard_page   = new DashboardPage( $this->settings_service );
+
+		global $wpdb;
+		$this->titoli_page = new TitoliListPage(
+			new TitoloRepository( $wpdb ),
+			new EventoRepository( $wpdb ),
+			new SettoreRepository( $wpdb ),
+			new PrezzoRepository( $wpdb ),
+			new TipologiaRepository( $wpdb )
+		);
 	}
 
 	/** Restore settings isolation. */
@@ -54,7 +78,7 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 
 	/** Admin menu should register top-level and submenu hooks. */
 	public function test_admin_menu_registers_hooks(): void {
-		$menu = new AdminMenu( $this->dashboard_page, $this->api_page );
+		$menu = new AdminMenu( $this->dashboard_page, $this->api_page, $this->titoli_page );
 		$menu->register();
 
 		self::assertHasAction( 'admin_menu' );
