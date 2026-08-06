@@ -32,6 +32,48 @@ final class ShortcodeHandler {
 	public function register(): void {
 		add_shortcode( 'cinebot_programmazione', array( $this, 'renderProgrammazione' ) );
 		add_shortcode( 'cinebot_titolo', array( $this, 'renderTitolo' ) );
+		add_action( 'wp_ajax_cinebot_wp_filter', array( $this, 'ajaxFilter' ) );
+		add_action( 'wp_ajax_nopriv_cinebot_wp_filter', array( $this, 'ajaxFilter' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'maybeEnqueueAssets' ) );
+	}
+
+	/**
+	 * Enqueue frontend assets only when a shortcode is present on the page.
+	 */
+	public function maybeEnqueueAssets(): void {
+		// Assets are enqueued from renderProgrammazione to ensure they load only when needed.
+	}
+
+	/**
+	 * AJAX handler for filtering and load-more.
+	 */
+	public function ajaxFilter(): void {
+		check_ajax_referer( 'cinebot_frontend', 'nonce' );
+
+		$atts = $this->normalizeAttributes( array(
+			'tipo'   => isset( $_POST['tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo'] ) ) : '',
+			'comune' => isset( $_POST['comune'] ) ? sanitize_text_field( wp_unslash( $_POST['comune'] ) ) : '',
+			'from'   => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
+			'locale' => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
+			'limit'  => isset( $_POST['limit'] ) ? absint( $_POST['limit'] ) : 50,
+			'offset' => isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0,
+			'order'  => isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'ASC',
+			'orderby' => isset( $_POST['orderby'] ) ? sanitize_text_field( wp_unslash( $_POST['orderby'] ) ) : 'inizio',
+		) );
+
+		$cards = $this->titles->findPublicSchedule( $atts );
+		$total = $this->titles->countPublicSchedule( $atts );
+
+		$html = $this->renderer->render( 'titolo-card-list', array(
+			'cards'     => $cards,
+			'show_desc' => $atts['show_desc'],
+		) );
+
+		wp_send_json_success( array(
+			'html'     => $html,
+			'total'    => $total,
+			'has_more' => ( $atts['offset'] + count( $cards ) ) < $total,
+		) );
 	}
 
 	/**
@@ -58,6 +100,8 @@ final class ShortcodeHandler {
 			'atts'      => $atts,
 			'instance'  => ++self::$instance_id,
 		) );
+
+		$this->enqueueFrontendAssets();
 
 		$ttl = (int) apply_filters( 'cinebot_wp_cache_ttl', 900 );
 		set_transient( $cache_key, $html, $ttl );
@@ -124,5 +168,32 @@ final class ShortcodeHandler {
 		$atts['show_desc']    = filter_var( $atts['show_desc'], FILTER_VALIDATE_BOOLEAN );
 
 		return $atts;
+	}
+
+	/** Enqueue frontend CSS/JS with localized AJAX data. */
+	private function enqueueFrontendAssets(): void {
+		wp_enqueue_style(
+			'cinebot-frontend',
+			plugins_url( 'assets/css/cinebot-frontend.css', CINEBOT_WP_FILE ),
+			array(),
+			CINEBOT_WP_VERSION
+		);
+
+		wp_enqueue_script(
+			'cinebot-frontend',
+			plugins_url( 'assets/js/cinebot-frontend.js', CINEBOT_WP_FILE ),
+			array(),
+			CINEBOT_WP_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'cinebot-frontend',
+			'cinebotWpFrontend',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'cinebot_frontend' ),
+			)
+		);
 	}
 }
