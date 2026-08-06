@@ -10,8 +10,10 @@ namespace CinebotWp\Tests\Integration;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\PrezzoRepository;
 use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
@@ -38,6 +40,9 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 
 	/** @var TitoliListPage */
 	private $titoli_page;
+
+	/** @var TitoloEditPage */
+	private $edit_page;
 
 	/** Set up page collaborators with isolated settings. */
 	public function set_up(): void {
@@ -67,6 +72,15 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			new PrezzoRepository( $wpdb ),
 			new TipologiaRepository( $wpdb )
 		);
+
+		$this->edit_page = new TitoloEditPage(
+			new TitoloRepository( $wpdb ),
+			new EventoRepository( $wpdb ),
+			new SettoreRepository( $wpdb ),
+			new PrezzoRepository( $wpdb ),
+			new TipologiaRepository( $wpdb ),
+			new LocaleRepository( $wpdb )
+		);
 	}
 
 	/** Restore settings isolation. */
@@ -78,7 +92,7 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 
 	/** Admin menu should register top-level and submenu hooks. */
 	public function test_admin_menu_registers_hooks(): void {
-		$menu = new AdminMenu( $this->dashboard_page, $this->api_page, $this->titoli_page );
+		$menu = new AdminMenu( $this->dashboard_page, $this->api_page, $this->titoli_page, $this->edit_page );
 		$menu->register();
 
 		self::assertHasAction( 'admin_menu' );

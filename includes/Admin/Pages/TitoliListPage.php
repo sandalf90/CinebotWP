@@ -69,7 +69,9 @@ final class TitoliListPage extends \WP_List_Table {
 		$this->prepare_items();
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Programmazioni', 'cinebot-wp' ); ?></h1>
+			<h1><?php esc_html_e( 'Programmazioni', 'cinebot-wp' ); ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=cinebot-wp-programmazione-edit' ) ); ?>" class="page-title-action"><?php esc_html_e( 'Nuovo titolo', 'cinebot-wp' ); ?></a>
+			</h1>
 			<?php $this->render_notices(); ?>
 			<form method="get" id="cinebot-titoli-filter">
 				<input type="hidden" name="page" value="cinebot-wp-programmazioni" />
@@ -149,11 +151,17 @@ final class TitoliListPage extends \WP_List_Table {
 	 */
 	protected function column_titolo( $item ): string {
 		$id         = (int) $item->id;
+		$edit_url   = admin_url( 'admin.php?page=cinebot-wp-programmazione-edit&id=' . $id );
 		$delete_url = wp_nonce_url(
 			admin_url( 'admin.php?page=cinebot-wp-programmazioni&action=delete&titolo=' . $id ),
 			'cinebot-wp-delete-titolo_' . $id
 		);
 		$actions    = array(
+			'edit'   => sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( $edit_url ),
+				esc_html__( 'Modifica', 'cinebot-wp' )
+			),
 			'delete' => sprintf(
 				'<a href="%s">%s</a>',
 				esc_url( $delete_url ),

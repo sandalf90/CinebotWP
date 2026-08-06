@@ -9,6 +9,7 @@ namespace CinebotWp\Admin;
 
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 
 /**
@@ -24,13 +25,17 @@ final class AdminMenu {
 	/** @var TitoliListPage */
 	private $titoli_page;
 
+	/** @var TitoloEditPage */
+	private $edit_page;
+
 	/**
 	 * Store the page collaborators.
 	 */
-	public function __construct( DashboardPage $dashboard, ApiPage $api_page, TitoliListPage $titoli_page ) {
+	public function __construct( DashboardPage $dashboard, ApiPage $api_page, TitoliListPage $titoli_page, TitoloEditPage $edit_page ) {
 		$this->dashboard   = $dashboard;
 		$this->api_page    = $api_page;
 		$this->titoli_page = $titoli_page;
+		$this->edit_page   = $edit_page;
 	}
 
 	/** Register the top-level menu, API submenu, and AJAX handlers. */
@@ -38,6 +43,7 @@ final class AdminMenu {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_cinebot_wp_save_api', array( $this->api_page, 'save' ) );
+		add_action( 'admin_post_cinebot_wp_save_titolo', array( $this->edit_page, 'save' ) );
 		add_action( 'wp_ajax_cinebot_wp_test_connection', array( $this->api_page, 'testConnection' ) );
 		add_action( 'wp_ajax_cinebot_wp_sync_now', array( $this->api_page, 'syncNow' ) );
 	}
@@ -81,6 +87,15 @@ final class AdminMenu {
 			$capability,
 			'cinebot-wp-programmazioni',
 			array( $this->titoli_page, 'render' )
+		);
+
+		add_submenu_page(
+			'cinebot-wp',
+			__( 'Edit Title', 'cinebot-wp' ),
+			'',
+			$capability,
+			'cinebot-wp-programmazione-edit',
+			array( $this->edit_page, 'render' )
 		);
 	}
 

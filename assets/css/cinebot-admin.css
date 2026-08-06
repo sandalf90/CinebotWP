@@ -35,3 +35,64 @@
 	border: 1px solid #f5c6cb;
 	color: #721c24;
 }
+
+/* Nested editor styles */
+
+.cinebot-edit-page {
+	max-width: 1200px;
+}
+
+.cinebot-title-fieldset {
+	border: 1px solid #ccd0d4;
+	padding: 12px 20px;
+	margin-bottom: 20px;
+}
+
+.cinebot-title-fieldset legend {
+	font-weight: 600;
+	padding: 0 6px;
+}
+
+.cinebot-events {
+	margin-bottom: 10px;
+}
+
+.cinebot-event-fieldset {
+	border: 1px solid #ccd0d4;
+	padding: 12px 20px;
+	margin-bottom: 15px;
+	background: #fafafa;
+}
+
+.cinebot-event-fieldset legend {
+	font-weight: 600;
+	padding: 0 6px;
+}
+
+.cinebot-sectors {
+	margin: 10px 0;
+}
+
+.cinebot-sector-row {
+	border: 1px solid #e0e0e0;
+	padding: 10px;
+	margin-bottom: 10px;
+	background: #fff;
+}
+
+.cinebot-prices-table {
+	width: 100%;
+	margin-top: 8px;
+}
+
+.cinebot-prices-table th,
+.cinebot-prices-table td {
+	padding: 4px 6px;
+	text-align: left;
+}
+
+.cinebot-prices-table input,
+.cinebot-prices-table select {
+	width: 100%;
+	max-width: 120px;
+}

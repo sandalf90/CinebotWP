@@ -10,9 +10,11 @@ namespace CinebotWp;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\PrezzoRepository;
 use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
@@ -105,10 +107,20 @@ final class Plugin {
 			new TipologiaRepository( $wpdb )
 		);
 
+		$edit_page = new TitoloEditPage(
+			new TitoloRepository( $wpdb ),
+			new EventoRepository( $wpdb ),
+			new SettoreRepository( $wpdb ),
+			new PrezzoRepository( $wpdb ),
+			new TipologiaRepository( $wpdb ),
+			new LocaleRepository( $wpdb )
+		);
+
 		return new AdminMenu(
 			new DashboardPage( $settings ),
 			new ApiPage( $settings, $scheduler, new SyncService( $wpdb, $api ) ),
-			$titoli_page
+			$titoli_page,
+			$edit_page
 		);
 	}
 

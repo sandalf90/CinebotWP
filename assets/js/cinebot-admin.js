@@ -1,13 +1,12 @@
 ( function () {
 	'use strict';
 
+	// ---------------------------------------------------------------- API page.
+
 	var statusEl = document.getElementById( 'cinebot-ajax-status' );
 
-	if ( ! statusEl ) {
-		return;
-	}
-
 	function showStatus( message, isError ) {
+		if ( ! statusEl ) { return; }
 		statusEl.textContent = message;
 		statusEl.className = 'cinebot-ajax-status' + ( isError ? ' error' : ' success' );
 	}
@@ -68,4 +67,90 @@
 			}, syncBtn );
 		} );
 	}
+
+	// ---------------------------------------------------- Nested editor page.
+
+	var eventTpl   = document.getElementById( 'cinebot-event-template' );
+	var sectorTpl  = document.getElementById( 'cinebot-sector-template' );
+	var priceTpl   = document.getElementById( 'cinebot-price-template' );
+	var eventsWrap = document.getElementById( 'cinebot-events' );
+
+	if ( ! eventTpl || ! eventsWrap ) {
+		return;
+	}
+
+	function nextIndex( container ) {
+		var n = parseInt( container.getAttribute( 'data-next-index' ), 10 ) || 1;
+		container.setAttribute( 'data-next-index', String( n + 1 ) );
+		return String( n );
+	}
+
+	function cloneTemplate( tpl ) {
+		return tpl.content.firstElementChild.cloneNode( true );
+	}
+
+	function addEvent() {
+		var idx = nextIndex( eventsWrap );
+		var node = cloneTemplate( eventTpl );
+		node.innerHTML = node.innerHTML.replace( /__INDEX__/g, idx );
+		eventsWrap.appendChild( node );
+	}
+
+	function addSector( button ) {
+		var eventKey = button.getAttribute( 'data-event-key' );
+		var wrap = button.closest( '.cinebot-event-fieldset' ).querySelector( '.cinebot-sectors' );
+		if ( ! wrap ) { return; }
+		var idx = nextIndex( wrap );
+		var node = cloneTemplate( sectorTpl );
+		node.innerHTML = node.innerHTML.replace( /__EVENT_INDEX__/g, eventKey ).replace( /__INDEX__/g, idx );
+		wrap.appendChild( node );
+	}
+
+	function addPrice( button ) {
+		var eventKey  = button.getAttribute( 'data-event-key' );
+		var sectorKey = button.getAttribute( 'data-sector-key' );
+		var wrap = button.closest( '.cinebot-sector-row' ).querySelector( '.cinebot-prices-table tbody' );
+		if ( ! wrap ) { return; }
+		var table = button.closest( '.cinebot-sector-row' ).querySelector( '.cinebot-prices-table' );
+		var idx = nextIndex( table );
+		var node = cloneTemplate( priceTpl );
+		node.innerHTML = node.innerHTML
+			.replace( /__EVENT_INDEX__/g, eventKey )
+			.replace( /__SECTOR_INDEX__/g, sectorKey )
+			.replace( /__INDEX__/g, idx );
+		wrap.appendChild( node );
+	}
+
+	function removeRow( button ) {
+		var eventFs = button.closest( '.cinebot-event-fieldset' );
+		var sectorRow = button.closest( '.cinebot-sector-row' );
+		var priceRow = button.closest( '.cinebot-price-row' );
+
+		if ( priceRow ) {
+			priceRow.remove();
+		} else if ( sectorRow ) {
+			sectorRow.remove();
+		} else if ( eventFs ) {
+			eventFs.remove();
+		}
+	}
+
+	document.addEventListener( 'click', function ( e ) {
+		var target = e.target;
+		if ( ! target || 'BUTTON' !== target.tagName ) { return; }
+
+		if ( target.classList.contains( 'cinebot-add-event' ) ) {
+			addEvent();
+		} else if ( target.classList.contains( 'cinebot-add-sector' ) ) {
+			addSector( target );
+		} else if ( target.classList.contains( 'cinebot-add-price' ) ) {
+			addPrice( target );
+		} else if (
+			target.classList.contains( 'cinebot-remove-event' ) ||
+			target.classList.contains( 'cinebot-remove-sector' ) ||
+			target.classList.contains( 'cinebot-remove-price' )
+		) {
+			removeRow( target );
+		}
+	} );
 } )();

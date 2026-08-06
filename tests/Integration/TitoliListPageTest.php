@@ -13,6 +13,7 @@ namespace CinebotWp\Tests\Integration;
 use CinebotWp\Admin\AdminMenu;
 use CinebotWp\Admin\Pages\ApiPage;
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Models\Evento;
@@ -297,15 +298,15 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		self::assertCount( 0, $this->prices->findBySettoreId( $second_sector ) );
 	}
 
-	/** The rendered page exposes no edit or new-title actions. */
-	public function test_no_edit_or_new_actions_in_render(): void {
+	/** The rendered page exposes edit and new-title actions. */
+	public function test_edit_and_new_actions_in_render(): void {
 		$this->titles->save( $this->title( null, 'Rendered', 'manual' ) );
 
 		$output = $this->capture_render();
 
-		self::assertStringNotContainsString( 'action=edit', $output );
-		self::assertStringNotContainsString( 'action=new', $output );
-		self::assertStringNotContainsStringIgnoringCase( 'Add new', $output );
+		self::assertStringContainsString( 'cinebot-wp-programmazione-edit', $output );
+		self::assertStringContainsStringIgnoringCase( 'Nuovo titolo', $output );
+		self::assertStringContainsStringIgnoringCase( 'Modifica', $output );
 		self::assertStringContainsString( 'action=delete', $output );
 	}
 
@@ -316,7 +317,15 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		$scheduler   = new CronScheduler( $settings, $sync );
 		$dashboard   = new DashboardPage( $settings );
 		$api_page    = new ApiPage( $settings, $scheduler, $sync );
-		$menu        = new AdminMenu( $dashboard, $api_page, $this->page );
+		$edit_page   = new TitoloEditPage(
+			$this->titles,
+			$this->events,
+			$this->sectors,
+			$this->prices,
+			$this->types,
+			$this->venues
+		);
+		$menu        = new AdminMenu( $dashboard, $api_page, $this->page, $edit_page );
 
 		$menu->register();
 		do_action( 'admin_menu' );
