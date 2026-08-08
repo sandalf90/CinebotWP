@@ -41,6 +41,7 @@
 			if ( loadMore ) {
 				loadMore.addEventListener( 'click', function () {
 					var page = parseInt( loadMore.getAttribute( 'data-page' ), 10 ) || 2;
+					var limit = parseInt( loadMore.getAttribute( 'data-limit' ), 10 ) || 50;
 					var params = new URLSearchParams();
 					if ( filters ) {
 						new FormData( filters ).forEach( function ( val, key ) { params.append( key, val ); } );
@@ -48,7 +49,7 @@
 					params.append( 'action', 'cinebot_wp_filter' );
 					params.append( 'nonce', window.cinebotWpFrontend ? window.cinebotWpFrontend.nonce : '' );
 					params.append( 'instance', instance );
-					params.append( 'offset', String( ( page - 1 ) * 20 ) );
+					params.append( 'offset', String( ( page - 1 ) * limit ) );
 
 					loadMore.disabled = true;
 					fetch( window.cinebotWpFrontend.ajaxUrl, {

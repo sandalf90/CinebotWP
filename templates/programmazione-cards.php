@@ -15,7 +15,6 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 <div class="cinebot-programmazione" data-instance="<?php echo esc_attr( (string) $instance ); ?>">
 	<?php if ( $atts['show_filters'] ) : ?>
 		<form class="cinebot-filters" id="cinebot-filters-<?php echo esc_attr( (string) $instance ); ?>">
-			<?php $types = new WP_Query( array( 'post_type' => 'cinebot_tipologia' ) ); ?>
 			<label>
 				<?php esc_html_e( 'Tipo:', 'cinebot-wp' ); ?>
 				<input type="text" name="tipo" value="<?php echo esc_attr( $atts['tipo'] ); ?>" placeholder="<?php esc_attr_e( 'Codice tipo', 'cinebot-wp' ); ?>" />
@@ -48,7 +47,7 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 			<?php endforeach; ?>
 		</div>
 		<?php if ( count( $cards ) < $total ) : ?>
-			<button class="cinebot-load-more" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-page="2"><?php esc_html_e( 'Carica altri', 'cinebot-wp' ); ?></button>
+			<button class="cinebot-load-more" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-page="2" data-limit="<?php echo esc_attr( (string) $atts['limit'] ); ?>"><?php esc_html_e( 'Carica altri', 'cinebot-wp' ); ?></button>
 		<?php endif; ?>
 	<?php endif; ?>
 </div>

@@ -7,6 +7,8 @@
 
 namespace CinebotWp\Frontend;
 
+use Throwable;
+
 /**
  * Renders PHP templates with safe output buffering and theme override lookup.
  */
@@ -25,9 +27,14 @@ final class TemplateRenderer {
 		}
 
 		ob_start();
-		// phpcs:ignore WordPress.Files.DirectFileAccess -- trusted plugin template.
-		require $path;
-		return (string) ob_get_clean();
+		try {
+			// phpcs:ignore WordPress.Files.DirectFileAccess -- trusted plugin template.
+			require $path;
+			return (string) ob_get_clean();
+		} catch ( \Throwable $e ) {
+			ob_end_clean();
+			throw $e;
+		}
 	}
 
 	/**

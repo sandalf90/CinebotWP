@@ -476,8 +476,10 @@ final class TitoloEditPage {
 
 		<template id="cinebot-price-template">
 			<tr class="cinebot-price-row" data-price-key="__INDEX__">
-				<input type="hidden" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][id]" value="0" />
-				<td><input type="text" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][nome]" value="" /></td>
+				<td>
+					<input type="hidden" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][id]" value="0" />
+					<input type="text" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][nome]" value="" />
+				</td>
 				<td>
 					<select name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][tipo]">
 						<option value="I">I</option>
@@ -648,6 +650,22 @@ final class TitoloEditPage {
 			}
 			if ( $event->localeId <= 0 ) {
 				$errors[] = sprintf( __( 'Event %d requires a venue.', 'cinebot-wp' ), $i + 1 );
+			}
+
+			foreach ( $entry['sectors'] as $j => $sector_data ) {
+				$sector = $sector_data['sector'];
+				if ( '' === trim( (string) $sector->nome ) ) {
+					$errors[] = sprintf( __( 'Event %d sector %d requires a name.', 'cinebot-wp' ), $i + 1, $j + 1 );
+				}
+
+				foreach ( $sector_data['prices'] as $k => $price ) {
+					if ( null !== $price->importo && (float) $price->importo < 0 ) {
+						$errors[] = sprintf( __( 'Event %d sector %d price %d has a negative amount.', 'cinebot-wp' ), $i + 1, $j + 1, $k + 1 );
+					}
+					if ( null !== $price->prevendita && (float) $price->prevendita < 0 ) {
+						$errors[] = sprintf( __( 'Event %d sector %d price %d has a negative pre-sale fee.', 'cinebot-wp' ), $i + 1, $j + 1, $k + 1 );
+					}
+				}
 			}
 		}
 

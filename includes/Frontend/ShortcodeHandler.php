@@ -7,6 +7,7 @@
 
 namespace CinebotWp\Frontend;
 
+use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\TitoloRepository;
 
 /**
@@ -16,16 +17,22 @@ final class ShortcodeHandler {
 	/** @var TitoloRepository */
 	private $titles;
 
+	/** @var EventoRepository */
+	private $events;
+
 	/** @var TemplateRenderer */
 	private $renderer;
 
 	/** @var int */
 	private static $instance_id = 0;
 
-	/** @param TitoloRepository $titles */
-	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer ) {
+	/**
+	 * Store repository and renderer collaborators.
+	 */
+	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?EventoRepository $events = null ) {
 		$this->titles   = $titles;
 		$this->renderer  = $renderer;
+		$this->events    = $events;
 	}
 
 	/** Register shortcodes and AJAX actions. */
@@ -51,13 +58,14 @@ final class ShortcodeHandler {
 		check_ajax_referer( 'cinebot_frontend', 'nonce' );
 
 		$atts = $this->normalizeAttributes( array(
-			'tipo'   => isset( $_POST['tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo'] ) ) : '',
-			'comune' => isset( $_POST['comune'] ) ? sanitize_text_field( wp_unslash( $_POST['comune'] ) ) : '',
-			'from'   => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
-			'locale' => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
-			'limit'  => isset( $_POST['limit'] ) ? absint( $_POST['limit'] ) : 50,
-			'offset' => isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0,
-			'order'  => isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'ASC',
+			'tipo'    => isset( $_POST['tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo'] ) ) : '',
+			'comune'  => isset( $_POST['comune'] ) ? sanitize_text_field( wp_unslash( $_POST['comune'] ) ) : '',
+			'from'    => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
+			'to'      => isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '',
+			'locale'  => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
+			'limit'   => isset( $_POST['limit'] ) ? absint( $_POST['limit'] ) : 50,
+			'offset'  => isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0,
+			'order'   => isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'ASC',
 			'orderby' => isset( $_POST['orderby'] ) ? sanitize_text_field( wp_unslash( $_POST['orderby'] ) ) : 'inizio',
 		) );
 
@@ -128,7 +136,7 @@ final class ShortcodeHandler {
 
 		return $this->renderer->render( 'dettaglio-titolo', array(
 			'title'   => $title,
-			'events'  => array(), // Events loaded via EventoRepository in full implementation.
+			'events'  => null !== $this->events ? $this->events->findByTitoloId( $id ) : array(),
 		) );
 	}
 

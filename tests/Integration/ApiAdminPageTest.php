@@ -62,25 +62,35 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			$this->scheduler(),
 			$this->sync_service
 		);
-		$this->dashboard_page   = new DashboardPage( $this->settings_service );
+		$this->dashboard_page   = new DashboardPage( $this->settings_service, $titolo_repo, $log_repo );
 
 		global $wpdb;
+		$titolo_repo  = new TitoloRepository( $wpdb );
+		$evento_repo  = new EventoRepository( $wpdb );
+		$settore_repo = new SettoreRepository( $wpdb );
+		$prezzo_repo  = new PrezzoRepository( $wpdb );
+		$tipo_repo    = new TipologiaRepository( $wpdb );
+		$locale_repo  = new LocaleRepository( $wpdb );
+		$log_repo     = new \CinebotWp\Repositories\SyncLogRepository( $wpdb );
+
 		$this->titoli_page = new TitoliListPage(
-			new TitoloRepository( $wpdb ),
-			new EventoRepository( $wpdb ),
-			new SettoreRepository( $wpdb ),
-			new PrezzoRepository( $wpdb ),
-			new TipologiaRepository( $wpdb )
+			$titolo_repo,
+			$evento_repo,
+			$settore_repo,
+			$prezzo_repo,
+			$tipo_repo
 		);
 
 		$this->edit_page = new TitoloEditPage(
-			new TitoloRepository( $wpdb ),
-			new EventoRepository( $wpdb ),
-			new SettoreRepository( $wpdb ),
-			new PrezzoRepository( $wpdb ),
-			new TipologiaRepository( $wpdb ),
-			new LocaleRepository( $wpdb )
+			$titolo_repo,
+			$evento_repo,
+			$settore_repo,
+			$prezzo_repo,
+			$tipo_repo,
+			$locale_repo
 		);
+
+		$this->dashboard_page = new DashboardPage( $this->settings_service, $titolo_repo, $log_repo );
 	}
 
 	/** Restore settings isolation. */
@@ -92,7 +102,17 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 
 	/** Admin menu should register top-level and submenu hooks. */
 	public function test_admin_menu_registers_hooks(): void {
-		$menu = new AdminMenu( $this->dashboard_page, $this->api_page, $this->titoli_page, $this->edit_page );
+		$menu = new AdminMenu(
+			$this->dashboard_page,
+			$this->api_page,
+			$this->titoli_page,
+			$this->edit_page,
+			new \CinebotWp\Admin\Pages\LocaliListPage( $locale_repo, $titolo_repo, $evento_repo ),
+			new \CinebotWp\Admin\Pages\LocaleEditPage( $locale_repo ),
+			new \CinebotWp\Admin\Pages\TipologieListPage( $tipo_repo ),
+			new \CinebotWp\Admin\Pages\TipologiaEditPage( $tipo_repo ),
+			new \CinebotWp\Admin\Pages\SyncLogPage( $log_repo )
+		);
 		$menu->register();
 
 		self::assertHasAction( 'admin_menu' );

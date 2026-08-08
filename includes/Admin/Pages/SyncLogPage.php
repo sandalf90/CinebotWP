@@ -28,6 +28,8 @@ final class SyncLogPage {
 
 	/** Render the log list page. */
 	public function render(): void {
+		$this->maybe_handle_bulk();
+
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
 		$repo = $this->logs;
@@ -133,6 +135,32 @@ final class SyncLogPage {
 
 		$cutoff = new DateTimeImmutable( '-30 days', wp_timezone() );
 		$deleted = $this->logs->deleteOlderThan( $cutoff );
+
+		wp_safe_redirect( admin_url( 'admin.php?page=cinebot-wp-log' ) );
+		exit;
+	}
+
+	/**
+	 * Handle bulk delete action for log entries.
+	 */
+	private function maybe_handle_bulk(): void {
+		if ( ! isset( $_REQUEST['action'] ) || 'delete' !== $_REQUEST['action'] ) {
+			return;
+		}
+
+		if ( ! current_user_can( $this->capability ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'cinebot-wp' ) );
+		}
+
+		check_admin_referer( 'bulk-logs' );
+
+		$ids = isset( $_REQUEST['log'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['log'] ) ) : array();
+
+		foreach ( $ids as $id ) {
+			if ( $id > 0 ) {
+				$this->logs->delete( $id );
+			}
+		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=cinebot-wp-log' ) );
 		exit;

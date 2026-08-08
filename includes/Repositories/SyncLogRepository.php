@@ -178,6 +178,18 @@ final class SyncLogRepository {
 	}
 
 	/**
+	 * Delete one log entry by ID.
+	 */
+	public function delete( int $id ): bool {
+		if ( $id <= 0 ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		return 1 === $this->db->delete( $this->table, array( 'id' => $id ), array( '%d' ) );
+	}
+
+	/**
 	 * Delete history strictly older than a UTC cutoff.
 	 *
 	 * @throws RuntimeException When deletion fails.

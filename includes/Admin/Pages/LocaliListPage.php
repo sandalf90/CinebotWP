@@ -7,6 +7,7 @@
 
 namespace CinebotWp\Admin\Pages;
 
+use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\TitoloRepository;
 
@@ -20,25 +21,33 @@ final class LocaliListPage {
 	/** @var TitoloRepository */
 	private $titles;
 
+	/** @var EventoRepository */
+	private $events;
+
 	/**
 	 * Store repository collaborators.
 	 */
-	public function __construct( LocaleRepository $venues, TitoloRepository $titles ) {
+	public function __construct( LocaleRepository $venues, TitoloRepository $titles, EventoRepository $events ) {
 		$this->venues = $venues;
 		$this->titles = $titles;
+		$this->events = $events;
 	}
 
 	/** Render the list page. */
 	public function render(): void {
+		$this->maybe_handle_bulk();
+
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
-		$table = new class( $this->venues, $this->titles ) extends \WP_List_Table {
+		$table = new class( $this->venues, $this->titles, $this->events ) extends \WP_List_Table {
 			/** @var LocaleRepository */
 			private $venues;
 			/** @var TitoloRepository */
 			private $titles;
+			/** @var EventoRepository */
+			private $events;
 
-			public function __construct( LocaleRepository $venues, TitoloRepository $titles ) {
+			public function __construct( LocaleRepository $venues, TitoloRepository $titles, EventoRepository $events ) {
 				parent::__construct( array(
 					'singular' => 'locale',
 					'plural'   => 'locali',
@@ -46,6 +55,7 @@ final class LocaliListPage {
 				) );
 				$this->venues = $venues;
 				$this->titles = $titles;
+				$this->events = $events;
 			}
 
 			public function get_columns() {
@@ -83,8 +93,8 @@ final class LocaliListPage {
 						return esc_html( $item->comune ?? '' );
 					case 'provincia':
 						return esc_html( $item->provincia ?? '' );
-					case 'eventi':
-						return (string) $this->venues->countEvents( (int) $item->id );
+				case 'eventi':
+					return (string) $this->events->countByLocaleId( (int) $item->id );
 					default:
 						return '';
 				}
@@ -136,5 +146,34 @@ final class LocaliListPage {
 			</form>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Handle bulk delete action with nonce and referential integrity.
+	 */
+	private function maybe_handle_bulk(): void {
+		if ( ! isset( $_REQUEST['action'] ) || 'delete' !== $_REQUEST['action'] ) {
+			return;
+		}
+
+		if ( ! current_user_can( (string) apply_filters( 'cinebot_wp_capability', 'manage_options' ) ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'cinebot-wp' ) );
+		}
+
+		check_admin_referer( 'bulk-locali' );
+
+		$ids = isset( $_REQUEST['locale'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['locale'] ) ) : array();
+		$deleted = 0;
+
+		foreach ( $ids as $id ) {
+			if ( $id > 0 && 0 === $this->events->countByLocaleId( $id ) ) {
+				if ( $this->venues->delete( $id ) ) {
+					$deleted++;
+				}
+			}
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=cinebot-wp-locali' ) );
+		exit;
 	}
 }

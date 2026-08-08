@@ -553,10 +553,16 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		$settings  = new SettingsService();
 		$sync      = new SyncService( self::$db );
 		$scheduler = new \CinebotWp\Services\CronScheduler( $settings, $sync );
-		$dashboard = new DashboardPage( $settings );
+		$log_repo  = new \CinebotWp\Repositories\SyncLogRepository( self::$db );
+		$dashboard = new DashboardPage( $settings, $this->titles, $log_repo );
 		$api_page  = new ApiPage( $settings, $scheduler, $sync );
 
-		$menu = new AdminMenu( $dashboard, $api_page, $this->list_page, $this->page );
+		$locali_page = new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->titles, $this->events );
+		$locale_edit = new \CinebotWp\Admin\Pages\LocaleEditPage( $this->venues );
+		$tipologie_page = new \CinebotWp\Admin\Pages\TipologieListPage( $this->types );
+		$tipologia_edit = new \CinebotWp\Admin\Pages\TipologiaEditPage( $this->types );
+		$log_page   = new \CinebotWp\Admin\Pages\SyncLogPage( $log_repo );
+		$menu = new AdminMenu( $dashboard, $api_page, $this->list_page, $this->page, $locali_page, $locale_edit, $tipologie_page, $tipologia_edit, $log_page );
 		$menu->register();
 
 		self::assertHasAction( 'admin_post_cinebot_wp_save_titolo' );

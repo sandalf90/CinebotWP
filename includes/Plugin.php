@@ -112,9 +112,11 @@ final class Plugin {
 		$locale_repo  = new LocaleRepository( $wpdb );
 		$tipo_repo    = new TipologiaRepository( $wpdb );
 
+		$evento_repo  = new EventoRepository( $wpdb );
+
 		$titoli_page = new TitoliListPage(
 			$titoli_repo,
-			new EventoRepository( $wpdb ),
+			$evento_repo,
 			new SettoreRepository( $wpdb ),
 			new PrezzoRepository( $wpdb ),
 			$tipo_repo
@@ -122,14 +124,14 @@ final class Plugin {
 
 		$edit_page = new TitoloEditPage(
 			$titoli_repo,
-			new EventoRepository( $wpdb ),
+			$evento_repo,
 			new SettoreRepository( $wpdb ),
 			new PrezzoRepository( $wpdb ),
 			$tipo_repo,
 			$locale_repo
 		);
 
-		$locali_page = new LocaliListPage( $locale_repo, $titoli_repo );
+		$locali_page = new LocaliListPage( $locale_repo, $titoli_repo, $evento_repo );
 		$locale_edit = new LocaleEditPage( $locale_repo );
 		$tipologie_page = new TipologieListPage( $tipo_repo );
 		$tipologia_edit = new TipologiaEditPage( $tipo_repo );
@@ -157,7 +159,8 @@ final class Plugin {
 
 		return new ShortcodeHandler(
 			new TitoloRepository( $wpdb ),
-			new TemplateRenderer()
+			new TemplateRenderer(),
+			new EventoRepository( $wpdb )
 		);
 	}
 
