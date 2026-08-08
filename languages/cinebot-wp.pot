@@ -1,8 +1,219 @@
-# Cinebot WP translation template (stub).
+# Cinebot WP translation template.
 # Generate the real .pot file with: wp i18n make-pot . languages/cinebot-wp.pot
 msgid ""
 msgstr ""
 "Project-Id-Version: Cinebot WP 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Language: it_IT\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: includes/Admin/AdminMenu.php
+msgid "Cinebot"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Dashboard"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "API Settings"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "API"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Programmazioni"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Locali"
+msgstr ""
+
+#: includes/Admin/AdminPages.php
+msgid "Tipologie evento"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Tipologie"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Log sincronizzazioni"
+msgstr ""
+
+#: includes/Admin/AdminMenu.php
+msgid "Log"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Cinebot API Settings"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Username"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Password"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Frontend ID"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Sync frequency"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Enable cron sync"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Schedule automatic synchronization"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Save settings"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Test connection"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Synchronize now"
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Nonce verification failed."
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Insufficient permissions."
+msgstr ""
+
+#: includes/Admin/Pages/ApiPage.php
+msgid "Unable to connect to the Cinebot API."
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Cinebot Dashboard"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Synchronization:"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Enabled"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Disabled"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Frequency:"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Next sync:"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Not scheduled"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Conteggi rapidi"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Titoli"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Manuali"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Eventi"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Tipologie attive"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Ultime sincronizzazioni"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Vedi tutti"
+msgstr ""
+
+#: includes/Admin/Pages/DashboardPage.php
+msgid "Nessuna sincronizzazione registrata."
+msgstr ""
+
+#: includes/Admin/Pages/SyncLogPage.php
+msgid "Pulisci log > 30 giorni"
+msgstr ""
+
+#: includes/Database/SchemaInstaller.php
+msgid "Cinebot WP requires InnoDB support. Enable InnoDB on the database server, then activate the plugin again."
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Filtra"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Tipo:"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Da:"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Comune:"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Codice tipo"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Carica altri"
+msgstr ""
+
+#: templates/programmazione-cards.php
+msgid "Nessuna programmazione trovata."
+msgstr ""
+
+#: includes/Services/ApiException.php
+msgid "API credentials are not configured."
+msgstr ""
+
+#: includes/Services/ApiException.php
+msgid "Cinebot API authentication failed."
+msgstr ""
+
+#: includes/Services/ApiException.php
+msgid "Unable to connect to the Cinebot API."
+msgstr ""
+
+#: includes/Services/SyncResult.php
+msgid "A schedule synchronization is already running."
+msgstr ""
+
+#: includes/Services/SyncResult.php
+msgid "Schedule synchronization failed."
+msgstr ""
