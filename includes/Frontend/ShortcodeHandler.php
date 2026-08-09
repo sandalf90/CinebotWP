@@ -152,7 +152,7 @@ final class ShortcodeHandler {
 	private function normalizeAttributes( array $attributes ): array {
 		$defaults = array(
 			'tipo'         => '',
-			'exclude_tipo'  => '',
+			'exclude_tipo' => '',
 			'locale'       => 0,
 			'comune'       => '',
 			'from'         => current_time( 'Y-m-d', true ),
@@ -164,6 +164,8 @@ final class ShortcodeHandler {
 			'show_desc'    => false,
 			'layout'       => 'cards',
 			'offset'       => 0,
+			'more_url'     => '',
+			'more_label'   => __( 'Vedi altro', 'cinebot-wp' ),
 		);
 
 		$atts = shortcode_atts( $defaults, $attributes, 'cinebot_programmazione' );
@@ -183,6 +185,8 @@ final class ShortcodeHandler {
 		$atts['show_desc']    = filter_var( $atts['show_desc'], FILTER_VALIDATE_BOOLEAN );
 
 		$atts['exclude_tipo'] = sanitize_text_field( $atts['exclude_tipo'] );
+		$atts['more_url']     = '' !== trim( $atts['more_url'] ) ? esc_url_raw( $atts['more_url'] ) : '';
+		$atts['more_label']   = sanitize_text_field( $atts['more_label'] );
 
 		return $atts;
 	}

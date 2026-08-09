@@ -227,6 +227,36 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		self::assertTrue( shortcode_exists( 'cinebot_titolo' ) );
 	}
 
+	/** more_url renders "Vedi altro" link when there are more results. */
+	public function test_renders_vedi_altro_when_more_url_set(): void {
+		$this->seed_active_event( '01', 'Cinema Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" limit="1" more_url="/programmazione-cinema"]' );
+
+		self::assertStringContainsString( 'cinebot-vedi-altro', $html );
+		self::assertStringContainsString( 'href="/programmazione-cinema"', $html );
+		self::assertStringContainsString( 'Vedi altro', $html );
+		self::assertStringNotContainsString( 'cinebot-load-more', $html );
+	}
+
+	/** more_url does not render "Vedi altro" when all results are shown. */
+	public function test_no_vedi_altro_when_all_results_shown(): void {
+		$this->seed_active_event( '01', 'Cinema Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" limit="100" more_url="/x"]' );
+
+		self::assertStringNotContainsString( 'cinebot-vedi-altro', $html );
+	}
+
+	/** more_label overrides the default button text. */
+	public function test_more_label_overrides_default(): void {
+		$this->seed_active_event( '01', 'Cinema Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" limit="1" more_url="/x" more_label="Tutti i film"]' );
+
+		self::assertStringContainsString( 'Tutti i film', $html );
+	}
+
 	/**
 	 * Seed an active event with a title, venue, and event.
 	 *

@@ -46,7 +46,11 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 				?>
 			<?php endforeach; ?>
 		</div>
-		<?php if ( count( $cards ) < $total ) : ?>
+		<?php if ( ! empty( $atts['more_url'] ) && count( $cards ) >= (int) $atts['limit'] ) : ?>
+			<a class="cinebot-vedi-altro" href="<?php echo esc_url( $atts['more_url'] ); ?>">
+				<?php echo esc_html( $atts['more_label'] ); ?>
+			</a>
+		<?php elseif ( empty( $atts['more_url'] ) && count( $cards ) < $total ) : ?>
 			<button class="cinebot-load-more" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-page="2" data-limit="<?php echo esc_attr( (string) $atts['limit'] ); ?>"><?php esc_html_e( 'Carica altri', 'cinebot-wp' ); ?></button>
 		<?php endif; ?>
 	<?php endif; ?>
