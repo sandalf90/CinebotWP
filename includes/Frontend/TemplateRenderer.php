@@ -28,11 +28,10 @@ final class TemplateRenderer {
 
 		ob_start();
 		try {
-			// phpcs:ignore WordPress.Files.DirectFileAccess -- trusted plugin template.
-			if ( ! empty( $context ) ) {
-				extract( $context, EXTR_SKIP );
-			}
+			// phpcs:ignoreStart WordPress.Files.DirectFileAccess, WordPress.PHP.DontExtract -- trusted plugin template, mirrors WP core load_template().
+			extract( $context, EXTR_SKIP );
 			require $path;
+			// phpcs:ignoreEnd
 			return (string) ob_get_clean();
 		} catch ( \Throwable $e ) {
 			ob_end_clean();
