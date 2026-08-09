@@ -96,6 +96,20 @@ final class ShortcodeHandler {
 		}
 		$atts = $this->normalizeAttributes( $attributes );
 
+		$current_page = 1;
+		$total_pages  = 0;
+		$base_url     = '';
+
+		if ( 'numbered' === $atts['pagination'] ) {
+			$atts['limit'] = $atts['per_page'];
+			if ( empty( $atts['more_url'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination, no mutation.
+				$current_page = isset( $_GET['cinebot_page'] ) ? max( 1, absint( wp_unslash( $_GET['cinebot_page'] ) ) ) : 1;
+				$atts['offset']       = ( $current_page - 1 ) * $atts['per_page'];
+				$atts['current_page'] = $current_page;
+			}
+		}
+
 		$cache_key = 'cinebot_prog_' . md5( wp_json_encode( $atts ) );
 		$cached = get_transient( $cache_key );
 		if ( false !== $cached ) {
@@ -105,11 +119,19 @@ final class ShortcodeHandler {
 		$cards = $this->titles->findPublicSchedule( $atts );
 		$total = $this->titles->countPublicSchedule( $atts );
 
+		if ( 'numbered' === $atts['pagination'] && empty( $atts['more_url'] ) ) {
+			$total_pages = max( 1, (int) ceil( $total / $atts['per_page'] ) );
+			$base_url    = esc_url_raw( remove_query_arg( 'cinebot_page' ) );
+		}
+
 		$html = $this->renderer->render( 'programmazione-cards', array(
-			'cards'     => $cards,
-			'total'     => $total,
-			'atts'      => $atts,
-			'instance'  => ++self::$instance_id,
+			'cards'        => $cards,
+			'total'        => $total,
+			'atts'         => $atts,
+			'instance'     => ++self::$instance_id,
+			'current_page' => $current_page,
+			'total_pages'  => $total_pages,
+			'base_url'     => $base_url,
 		) );
 
 		$this->enqueueFrontendAssets();
@@ -166,6 +188,8 @@ final class ShortcodeHandler {
 			'offset'       => 0,
 			'more_url'     => '',
 			'more_label'   => __( 'Vedi altro', 'cinebot-wp' ),
+			'pagination'   => 'ajax',
+			'per_page'     => 0,
 		);
 
 		$atts = shortcode_atts( $defaults, $attributes, 'cinebot_programmazione' );
@@ -187,6 +211,15 @@ final class ShortcodeHandler {
 		$atts['exclude_tipo'] = sanitize_text_field( $atts['exclude_tipo'] );
 		$atts['more_url']     = '' !== trim( $atts['more_url'] ) ? esc_url_raw( $atts['more_url'] ) : '';
 		$atts['more_label']   = sanitize_text_field( $atts['more_label'] );
+
+		if ( ! in_array( $atts['pagination'], array( 'ajax', 'numbered' ), true ) ) {
+			$atts['pagination'] = 'ajax';
+		}
+		$atts['per_page'] = (int) $atts['per_page'];
+		if ( $atts['per_page'] <= 0 ) {
+			$atts['per_page'] = $atts['limit'];
+		}
+		$atts['per_page'] = max( 1, min( 100, $atts['per_page'] ) );
 
 		return $atts;
 	}

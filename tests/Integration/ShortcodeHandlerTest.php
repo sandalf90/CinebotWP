@@ -257,6 +257,55 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'Tutti i film', $html );
 	}
 
+	/** Numbered pagination renders page links when total > per_page. */
+	public function test_numbered_pagination_renders_links(): void {
+		for ( $i = 0; $i < 5; $i++ ) {
+			$this->seed_active_event( '01', 'Cinema Show ' . $i );
+		}
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" pagination="numbered" per_page="2"]' );
+
+		self::assertStringContainsString( 'cinebot-pagination', $html );
+		self::assertStringContainsString( 'cinebot_page=1', $html );
+		self::assertStringContainsString( 'cinebot_page=2', $html );
+		self::assertStringContainsString( 'cinebot_page=3', $html );
+		self::assertStringNotContainsString( 'cinebot-load-more', $html );
+	}
+
+	/** Numbered pagination returns correct page when cinebot_page is set. */
+	public function test_numbered_pagination_page_2_offset(): void {
+		for ( $i = 0; $i < 5; $i++ ) {
+			$this->seed_active_event( '01', 'Cinema Show ' . $i );
+		}
+
+		$_GET['cinebot_page'] = '2';
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" pagination="numbered" per_page="2"]' );
+		unset( $_GET['cinebot_page'] );
+
+		self::assertStringContainsString( 'cinebot-page-current', $html );
+	}
+
+	/** Numbered pagination does not render nav when only one page. */
+	public function test_numbered_pagination_no_nav_single_page(): void {
+		$this->seed_active_event( '01', 'Single Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" pagination="numbered" per_page="20"]' );
+
+		self::assertStringNotContainsString( 'cinebot-pagination', $html );
+	}
+
+	/** more_url takes precedence over numbered pagination. */
+	public function test_more_url_takes_precedence_over_numbered(): void {
+		for ( $i = 0; $i < 5; $i++ ) {
+			$this->seed_active_event( '01', 'Cinema Show ' . $i );
+		}
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" pagination="numbered" per_page="2" more_url="/x"]' );
+
+		self::assertStringContainsString( 'cinebot-vedi-altro', $html );
+		self::assertStringNotContainsString( 'cinebot-pagination', $html );
+	}
+
 	/**
 	 * Seed an active event with a title, venue, and event.
 	 *

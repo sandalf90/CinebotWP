@@ -11,6 +11,9 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 /** @var int $total */
 /** @var array $atts */
 /** @var int $instance */
+/** @var int $current_page */
+/** @var int $total_pages */
+/** @var string $base_url */
 ?>
 <div class="cinebot-programmazione" data-instance="<?php echo esc_attr( (string) $instance ); ?>">
 	<?php if ( $atts['show_filters'] ) : ?>
@@ -50,7 +53,20 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 			<a class="cinebot-vedi-altro" href="<?php echo esc_url( $atts['more_url'] ); ?>">
 				<?php echo esc_html( $atts['more_label'] ); ?>
 			</a>
-		<?php elseif ( empty( $atts['more_url'] ) && count( $cards ) < $total ) : ?>
+		<?php elseif ( 'numbered' === $atts['pagination'] && $total_pages > 1 ) : ?>
+			<nav class="cinebot-pagination" aria-label="<?php esc_attr_e( 'Navigazione pagine', 'cinebot-wp' ); ?>">
+				<?php for ( $i = 1; $i <= $total_pages; $i++ ) : ?>
+					<?php
+					$sep = false !== strpos( $base_url, '?' ) ? '&' : '?';
+					$page_url = $base_url . $sep . 'cinebot_page=' . $i;
+					$is_current = $i === $current_page;
+					?>
+					<a href="<?php echo esc_url( $page_url ); ?>" <?php echo $is_current ? 'aria-current="page" class="cinebot-page-current"' : ''; ?>>
+						<?php echo esc_html( (string) $i ); ?>
+					</a>
+				<?php endfor; ?>
+			</nav>
+		<?php elseif ( 'ajax' === $atts['pagination'] && count( $cards ) < $total ) : ?>
 			<button class="cinebot-load-more" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-page="2" data-limit="<?php echo esc_attr( (string) $atts['limit'] ); ?>"><?php esc_html_e( 'Carica altri', 'cinebot-wp' ); ?></button>
 		<?php endif; ?>
 	<?php endif; ?>
