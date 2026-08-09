@@ -283,6 +283,10 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		unset( $_GET['cinebot_page'] );
 
 		self::assertStringContainsString( 'cinebot-page-current', $html );
+		self::assertStringContainsString( 'Cinema Show 2', $html );
+		self::assertStringContainsString( 'Cinema Show 3', $html );
+		self::assertStringNotContainsString( 'Cinema Show 0', $html );
+		self::assertStringNotContainsString( 'Cinema Show 1', $html );
 	}
 
 	/** Numbered pagination does not render nav when only one page. */
