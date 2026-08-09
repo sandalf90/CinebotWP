@@ -87,10 +87,13 @@ final class ShortcodeHandler {
 	/**
 	 * Render the programmazione shortcode.
 	 *
-	 * @param array $attributes Shortcode attributes.
+	 * @param array|string $attributes Shortcode attributes (empty string when no attrs).
 	 * @return string HTML output.
 	 */
-	public function renderProgrammazione( array $attributes = array() ): string {
+	public function renderProgrammazione( $attributes = array() ): string {
+		if ( ! is_array( $attributes ) ) {
+			$attributes = array();
+		}
 		$atts = $this->normalizeAttributes( $attributes );
 
 		$cache_key = 'cinebot_prog_' . md5( wp_json_encode( $atts ) );
@@ -120,10 +123,13 @@ final class ShortcodeHandler {
 	/**
 	 * Render the single title detail shortcode.
 	 *
-	 * @param array $attributes Shortcode attributes.
+	 * @param array|string $attributes Shortcode attributes (empty string when no attrs).
 	 * @return string HTML output.
 	 */
-	public function renderTitolo( array $attributes = array() ): string {
+	public function renderTitolo( $attributes = array() ): string {
+		if ( ! is_array( $attributes ) ) {
+			$attributes = array();
+		}
 		$id = isset( $attributes['id'] ) ? absint( $attributes['id'] ) : 0;
 		if ( $id <= 0 ) {
 			return '';

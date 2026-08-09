@@ -29,6 +29,9 @@ final class TemplateRenderer {
 		ob_start();
 		try {
 			// phpcs:ignore WordPress.Files.DirectFileAccess -- trusted plugin template.
+			if ( ! empty( $context ) ) {
+				extract( $context, EXTR_SKIP );
+			}
 			require $path;
 			return (string) ob_get_clean();
 		} catch ( \Throwable $e ) {
