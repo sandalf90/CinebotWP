@@ -8,6 +8,7 @@
 namespace CinebotWp\Tests\Integration;
 
 use CinebotWp\Admin\Pages\DashboardPage;
+use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Frontend\ShortcodeHandler;
 use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Models\Titolo;
@@ -32,6 +33,7 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 		global $wpdb;
+		( new SchemaInstaller( $wpdb ) )->install();
 		$this->titles = new TitoloRepository( $wpdb );
 		$this->events = new EventoRepository( $wpdb );
 		$this->handler = new ShortcodeHandler(
