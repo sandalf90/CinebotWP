@@ -152,6 +152,7 @@ final class ShortcodeHandler {
 	private function normalizeAttributes( array $attributes ): array {
 		$defaults = array(
 			'tipo'         => '',
+			'exclude_tipo'  => '',
 			'locale'       => 0,
 			'comune'       => '',
 			'from'         => current_time( 'Y-m-d', true ),
@@ -180,6 +181,8 @@ final class ShortcodeHandler {
 
 		$atts['show_filters'] = filter_var( $atts['show_filters'], FILTER_VALIDATE_BOOLEAN );
 		$atts['show_desc']    = filter_var( $atts['show_desc'], FILTER_VALIDATE_BOOLEAN );
+
+		$atts['exclude_tipo'] = sanitize_text_field( $atts['exclude_tipo'] );
 
 		return $atts;
 	}

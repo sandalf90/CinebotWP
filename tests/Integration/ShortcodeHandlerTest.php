@@ -104,6 +104,30 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		self::assertStringNotContainsString( 'Concert Show', $html );
 	}
 
+	/** Shortcode filters by exclude_tipo (all types except the given code). */
+	public function test_filters_by_exclude_tipo(): void {
+		$this->seed_active_event( '01', 'Cinema Show' );
+		$this->seed_active_event( '45', 'Teatro Prosa Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione exclude_tipo="01"]' );
+
+		self::assertStringNotContainsString( 'Cinema Show', $html );
+		self::assertStringContainsString( 'Teatro Prosa Show', $html );
+	}
+
+	/** tipo takes precedence over exclude_tipo when both are set. */
+	public function test_tipo_takes_precedence_over_exclude_tipo(): void {
+		$this->seed_active_event( '01', 'Cinema Show' );
+		$this->seed_active_event( '45', 'Teatro Prosa Show' );
+		$this->seed_active_event( '53', 'Concert Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione tipo="01" exclude_tipo="45"]' );
+
+		self::assertStringContainsString( 'Cinema Show', $html );
+		self::assertStringNotContainsString( 'Teatro Prosa Show', $html );
+		self::assertStringNotContainsString( 'Concert Show', $html );
+	}
+
 	/** Shortcode excludes inactive events. */
 	public function test_excludes_inactive_events(): void {
 		global $wpdb;

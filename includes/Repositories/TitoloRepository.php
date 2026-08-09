@@ -293,6 +293,9 @@ final class TitoloRepository {
 		if ( isset( $filters['tipo'] ) && '' !== trim( (string) $filters['tipo'] ) ) {
 			$clauses[] = 'ty.codice = %s';
 			$values[] = sanitize_text_field( (string) $filters['tipo'] );
+		} elseif ( isset( $filters['exclude_tipo'] ) && '' !== trim( (string) $filters['exclude_tipo'] ) ) {
+			$clauses[] = 'ty.codice != %s';
+			$values[] = sanitize_text_field( (string) $filters['exclude_tipo'] );
 		}
 		$locale = isset( $filters['locale'] ) ? (int) $filters['locale'] : 0;
 		if ( $locale > 0 ) {
