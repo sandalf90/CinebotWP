@@ -61,6 +61,7 @@ final class ModelsTest extends TestCase {
 				'row'   => array(
 					'id'                => 10,
 					'idevento'          => 501,
+					'url_acquisto'      => 'https://ticket.cinebot.it/martinovich/evento/501/acquista',
 					'titolo_id'         => 9,
 					'inizio'            => '2026-08-10 21:00:00',
 					'organizzatore_id'  => 44,
@@ -203,6 +204,7 @@ final class ModelsTest extends TestCase {
 			)
 		);
 		self::assertNull( $evento->idevento );
+		self::assertNull( $evento->urlAcquisto );
 		self::assertNull( $evento->stato );
 		self::assertSame( 'manual', $evento->source );
 		self::assertSame( 1, $evento->syncActive );

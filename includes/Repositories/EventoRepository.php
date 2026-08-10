@@ -49,22 +49,23 @@ final class EventoRepository {
 		$manual = 'manual' === $event->source;
 		$now = current_time( 'mysql', true );
 		$data = array(
-			'idevento' => $event->idevento,
-			'titolo_id' => $event->titoloId,
-			'inizio' => $event->inizio,
-			'organizzatore_id' => $event->organizzatoreId,
-			'organizzatore_cf' => $event->organizzatoreCf,
-			'locale_id' => $event->localeId,
-			'stato' => $event->stato,
-			'otp' => $event->otp,
-			'controlloaccessi' => $event->controlloaccessi,
-			'mappa' => $event->mappa,
-			'source' => $event->source,
-			'sync_active' => $manual ? 1 : $event->syncActive,
-			'last_seen_sync' => $manual ? null : $event->lastSeenSync,
-			'updated_at' => $now,
+			'idevento'          => $event->idevento,
+			'url_acquisto'      => $event->urlAcquisto,
+			'titolo_id'         => $event->titoloId,
+			'inizio'            => $event->inizio,
+			'organizzatore_id'  => $event->organizzatoreId,
+			'organizzatore_cf'  => $event->organizzatoreCf,
+			'locale_id'         => $event->localeId,
+			'stato'             => $event->stato,
+			'otp'               => $event->otp,
+			'controlloaccessi'  => $event->controlloaccessi,
+			'mappa'              => $event->mappa,
+			'source'             => $event->source,
+			'sync_active'        => $manual ? 1 : $event->syncActive,
+			'last_seen_sync'     => $manual ? null : $event->lastSeenSync,
+			'updated_at'         => $now,
 		);
-		$formats = array( '%d', '%d', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s' );
+		$formats = array( '%d', '%s', '%d', '%s', '%d', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s' );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		if ( null === $event->id ) {
 			$data['created_at'] = $now;

@@ -106,6 +106,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$event->controlloaccessi = 0;
 		$event->mappa = 81;
 		$event->syncActive = 0;
+		$event->urlAcquisto = 'https://ticket.cinebot.it/martinovich/evento/601/acquista';
 		$event_id = $this->events->save( $event );
 		$stored_event = $this->events->findByRemoteId( 601 );
 		self::assertInstanceOf( Evento::class, $stored_event );
@@ -167,6 +168,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$stored_manual_price = $this->prices->findBySettoreId( $manual_sector_id )[0];
 		self::assertSame( 1, $stored_manual_event->syncActive );
 		self::assertNull( $stored_manual_event->lastSeenSync );
+		self::assertNull( $stored_manual_event->urlAcquisto );
 		self::assertSame( 1, $stored_manual_sector->syncActive );
 		self::assertNull( $stored_manual_sector->lastSeenSync );
 		self::assertSame( 1, $stored_manual_price->syncActive );

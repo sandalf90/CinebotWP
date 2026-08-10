@@ -97,7 +97,7 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 			self::assertSame( 'InnoDB', $this->table_engine( $table ) );
 		}
 
-		self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
+		self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
 		self::assertArrayNotHasKey( 'cinebot_wp_db_version', wp_load_alloptions() );
 		self::assertSame(
 			62,
@@ -110,6 +110,9 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		$this->assert_nullable_column( 'settori', 'idsettore' );
 		$this->assert_nullable_column( 'prezzi', 'idprezzo' );
 		$this->assert_nullable_column( 'locali', 'locale_id_remoto' );
+
+		$this->assert_nullable_column( 'eventi', 'url_acquisto' );
+		$this->assert_column_type( 'eventi', 'url_acquisto', 'varchar(500)' );
 
 		$this->assert_index( 'titoli', 'idtitolo', array( 'idtitolo' ), true );
 		$this->assert_index( 'titoli', 'frontend_sync', array( 'frontend_id', 'sync_active', 'last_seen_sync' ) );
@@ -209,16 +212,18 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 				);
 			}
 
-			self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
-			self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
+		self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+		self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
+		self::assertFalse( get_option( 'cinebot_wp_db_version' ) );
 
-			$installer->install();
+		$installer->install();
 
-			self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
-			self::assertSame(
-				array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
-				$db->transaction_queries
-			);
+		self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+		self::assertSame(
+			array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
+			$db->transaction_queries
+		);
+		self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
 		} finally {
 			$db->close();
 		}
@@ -245,7 +250,7 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		Plugin::deactivate();
 
 		self::assertFalse( wp_next_scheduled( 'cinebot_wp_sync_event' ) );
-		self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
+		self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
 		self::assertSame(
 			self::$db->prefix . 'cinebot_titoli',
 			self::$db->get_var(
@@ -347,6 +352,14 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		$result = self::$db->get_row( self::$db->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ) );
 		self::assertIsObject( $result );
 		self::assertSame( 'YES', $result->Null );
+	}
+
+	/** Assert the normalized SQL type for one column. */
+	private function assert_column_type( string $suffix, string $column, string $type ): void {
+		$table  = self::$db->prefix . 'cinebot_' . $suffix;
+		$result = self::$db->get_row( self::$db->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", $column ) );
+		self::assertIsObject( $result );
+		self::assertSame( $type, strtolower( (string) $result->Type ) );
 	}
 
 	/**

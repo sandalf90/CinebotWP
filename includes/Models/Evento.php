@@ -13,6 +13,7 @@ namespace CinebotWp\Models;
 final class Evento {
 	public ?int $id = null;
 	public ?int $idevento = null;
+	public ?string $urlAcquisto = null;
 	public int $titoloId = 0;
 	public string $inizio = '';
 	public ?int $organizzatoreId = null;
@@ -37,6 +38,7 @@ final class Evento {
 		$model                    = new self();
 		$model->id                = isset( $data['id'] ) ? (int) $data['id'] : null;
 		$model->idevento          = isset( $data['idevento'] ) ? (int) $data['idevento'] : null;
+		$model->urlAcquisto       = isset( $data['url_acquisto'] ) ? (string) $data['url_acquisto'] : null;
 		$model->titoloId          = isset( $data['titolo_id'] ) ? (int) $data['titolo_id'] : 0;
 		$model->inizio            = isset( $data['inizio'] ) ? (string) $data['inizio'] : '';
 		$model->organizzatoreId   = isset( $data['organizzatore_id'] ) ? (int) $data['organizzatore_id'] : null;
@@ -64,6 +66,7 @@ final class Evento {
 		return array(
 			'id'                 => $this->id,
 			'idevento'           => $this->idevento,
+			'url_acquisto'      => $this->urlAcquisto,
 			'titolo_id'          => $this->titoloId,
 			'inizio'             => $this->inizio,
 			'organizzatore_id'   => $this->organizzatoreId,

@@ -14,6 +14,8 @@ use wpdb;
  * Installs the plugin's custom tables and initial data.
  */
 final class SchemaInstaller {
+	public const DB_VERSION = '1.1.0';
+
 	/** @var wpdb */
 	private $db;
 
@@ -45,11 +47,8 @@ final class SchemaInstaller {
 			dbDelta( $statement );
 		}
 
-		if ( ! add_option( 'cinebot_wp_db_version', '1.0.0', '', false ) ) {
-			update_option( 'cinebot_wp_db_version', '1.0.0', false );
-		}
-
 		$this->seed_event_types();
+		$this->store_version();
 	}
 
 	/**
@@ -116,6 +115,7 @@ final class SchemaInstaller {
 			"CREATE TABLE {$base}eventi (
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				idevento bigint(20) unsigned NULL,
+				url_acquisto varchar(500) NULL,
 				titolo_id bigint(20) unsigned NOT NULL,
 				inizio datetime NOT NULL,
 				organizzatore_id bigint(20) NULL,
@@ -218,6 +218,19 @@ final class SchemaInstaller {
 				KEY status (status)
 			) {$table_options};",
 		);
+	}
+
+	/** Store the completed schema version without making the option autoload. */
+	private function store_version(): void {
+		if ( ! add_option( 'cinebot_wp_db_version', self::DB_VERSION, '', false ) ) {
+			update_option( 'cinebot_wp_db_version', self::DB_VERSION, false );
+		}
+
+		if ( self::DB_VERSION !== get_option( 'cinebot_wp_db_version' ) ) {
+			throw new RuntimeException(
+				esc_html__( 'Cinebot WP could not record its database version.', 'cinebot-wp' )
+			);
+		}
 	}
 
 	/**
