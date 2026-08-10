@@ -84,12 +84,12 @@ Non e' necessario un indice: il campo non viene usato per ricerca, ordinamento o
 
 ## Upgrade Automatico
 
-Lo schema usa una nuova versione DB successiva a `1.0.0`. Prima di comporre servizi e repository, il bootstrap confronta `cinebot_wp_db_version` con la versione corrente dello schema.
+La versione DB dello schema diventa `1.1.0`. Prima di comporre servizi e repository, il bootstrap confronta `cinebot_wp_db_version` con questa versione.
 
-- Se le versioni coincidono, non esegue query di migrazione.
-- Se differiscono o l'opzione non esiste, richiama l'installer idempotente basato su `dbDelta()`.
+- Se la versione memorizzata e' uguale o successiva a `1.1.0`, non esegue query di migrazione e non tenta downgrade.
+- Se la versione e' precedente o l'opzione non esiste, richiama l'installer idempotente basato su `dbDelta()`.
 - L'opzione versione viene aggiornata solo dopo che schema e seeding sono terminati con successo.
-- Un errore lascia invariata la versione precedente, permettendo un nuovo tentativo al caricamento successivo.
+- Un errore lascia invariata la versione precedente, interrompe soltanto il boot delle funzionalita' Cinebot dipendenti dallo schema e registra un avviso amministrativo sicuro. WordPress continua a rispondere e il plugin ritenta l'upgrade al caricamento successivo.
 - La migrazione conserva tutte le righe e aggiunge `url_acquisto` con valore iniziale `NULL`.
 - La migrazione non avvia una sincronizzazione. La sincronizzazione manuale o pianificata successiva esegue il backfill naturale usando i dati correnti dell'API.
 
@@ -132,8 +132,8 @@ Non sono previsti import parziali, fallback a HTTP o URL costruiti dal dominio W
 - Un database alla versione precedente viene aggiornato automaticamente.
 - Le righe preesistenti restano invariate e ricevono `NULL` nella nuova colonna.
 - La versione DB cambia soltanto dopo un upgrade riuscito.
-- Un upgrade fallito rimane ritentabile.
-- Un bootstrap con versione corrente non riesegue l'installer.
+- Un upgrade fallito rimane ritentabile, non avvia servizi su uno schema incompleto e non interrompe WordPress.
+- Un bootstrap con versione `1.1.0` o successiva non riesegue l'installer.
 
 ### Sincronizzazione E Admin
 
