@@ -708,11 +708,13 @@ final class TitoloEditPage {
 				$stored               = $existing_events[ $event_id ];
 				$event->source        = $stored->source;
 				$event->idevento      = $stored->idevento;
+				$event->urlAcquisto   = $stored->urlAcquisto;
 				$event->syncActive    = $stored->syncActive;
 				$event->lastSeenSync  = $stored->lastSeenSync;
 			} else {
 				$event->source       = 'manual';
 				$event->idevento     = null;
+				$event->urlAcquisto  = null;
 				$event->syncActive   = 1;
 				$event->lastSeenSync = null;
 			}

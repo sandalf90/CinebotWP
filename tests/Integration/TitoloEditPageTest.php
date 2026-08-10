@@ -109,15 +109,34 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 			$this->prices,
 			$this->types
 		);
+
+		add_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 	}
 
 	/** Clear hierarchy fixtures after each test. */
 	public function tear_down(): void {
+		remove_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 		$this->clear_tables();
 		$_POST  = array();
 		$_GET   = array();
 		$_REQUEST = array();
 		parent::tear_down();
+	}
+
+	/**
+	 * Intercept wp_safe_redirect() inside the test suite.
+	 *
+	 * The WordPress test bootstrap echoes output before tests run, so any
+	 * header() call from wp_redirect() triggers "Cannot modify header
+	 * information". Throwing WPDieException lets the existing try/catch
+	 * blocks around save() intercept the redirect as designed.
+	 *
+	 * @param string|mixed $location Redirect location.
+	 * @return string|mixed Never reached; exception short-circuits.
+	 * @throws WPDieException Always.
+	 */
+	public function intercept_redirect( $location ) {
+		throw new \WPDieException( is_string( $location ) ? $location : '' );
 	}
 
 	/** The new form renders with a nonce and all declared title fields. */
@@ -396,13 +415,16 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertCount( 1, $events );
 		self::assertSame( 'manual', $events[0]->source );
 		self::assertNull( $events[0]->idevento );
+		self::assertNull( $events[0]->urlAcquisto );
 	}
 
-	/** Editing an existing API event keeps source=api and idevento. */
-	public function test_edit_api_event_keeps_source_api(): void {
+	/** Editing an existing API event keeps source=api, idevento, and the purchase URL. */
+	public function test_edit_api_event_keeps_source_identity_and_purchase_url(): void {
 		$title_id = $this->titles->save( $this->title( 300, 'API Title', 'api' ) );
 		$venue    = $this->venue();
-		$event_id = $this->events->save( $this->event( 999, $title_id, $venue, 'api' ) );
+		$event = $this->event( 999, $title_id, $venue, 'api' );
+		$event->urlAcquisto = 'https://ticket.cinebot.it/martinovich/evento/999/acquista';
+		$event_id = $this->events->save( $event );
 
 		$this->set_post_request(
 			array(
@@ -431,6 +453,10 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertCount( 1, $events );
 		self::assertSame( 'api', $events[0]->source );
 		self::assertSame( 999, $events[0]->idevento );
+		self::assertSame(
+			'https://ticket.cinebot.it/martinovich/evento/999/acquista',
+			$events[0]->urlAcquisto
+		);
 	}
 
 	/** New sector rows get source=manual and null idsettore. */
