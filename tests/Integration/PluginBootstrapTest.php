@@ -7,10 +7,12 @@
 
 namespace CinebotWp\Tests\Integration;
 
+use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Plugin;
 use ReflectionClass;
 use WP_UnitTestCase;
 use ZipArchive;
+use wpdb;
 
 /**
  * Verifies the executable plugin foundation.
@@ -90,6 +92,49 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 			}
 		} finally {
 			$archive->close();
+		}
+	}
+
+	/** A failed automatic upgrade stops Cinebot composition without breaking WordPress. */
+	public function test_failed_schema_upgrade_stops_boot_and_renders_safe_admin_notice(): void {
+		global $wpdb;
+		$original_db = $wpdb;
+		update_option( 'cinebot_wp_db_version', '1.0.0', false );
+		wp_set_current_user( 1 );
+
+		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			public function get_results( $query = null, $output = OBJECT ) {
+				if ( 'SHOW ENGINES' === $query ) {
+					return array();
+				}
+				return parent::get_results( $query, $output );
+			}
+		};
+		$failing_db->set_prefix( $original_db->prefix );
+		$wpdb = $failing_db;
+		$plugin = ( new ReflectionClass( Plugin::class ) )->newInstanceWithoutConstructor();
+		$boot_count = 0;
+		$observer = static function () use ( &$boot_count ): void {
+			++$boot_count;
+		};
+		add_action( 'cinebot_wp_booted', $observer );
+
+		try {
+			$plugin->boot();
+			self::assertSame( 0, $boot_count );
+			ob_start();
+			do_action( 'admin_notices' );
+			$notice = (string) ob_get_clean();
+			self::assertStringContainsString( 'could not update its database', $notice );
+			self::assertStringNotContainsString( 'InnoDB', $notice );
+			self::assertSame( '1.0.0', get_option( 'cinebot_wp_db_version' ) );
+		} finally {
+			remove_action( 'cinebot_wp_booted', $observer );
+			remove_action( 'admin_notices', array( $plugin, 'render_schema_upgrade_error' ) );
+			$wpdb = $original_db;
+			$failing_db->close();
+			update_option( 'cinebot_wp_db_version', SchemaInstaller::DB_VERSION, false );
+			wp_set_current_user( 0 );
 		}
 	}
 }

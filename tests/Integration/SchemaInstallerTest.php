@@ -163,6 +163,67 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		);
 	}
 
+	/** An old schema gains the purchase column without changing its event rows. */
+	public function test_upgrade_if_needed_preserves_existing_events_and_adds_purchase_url(): void {
+		$installer = new SchemaInstaller( self::$db );
+		$installer->install();
+		$table = self::$db->prefix . 'cinebot_eventi';
+
+		self::$db->insert(
+			$table,
+			array(
+				'idevento'  => 777,
+				'titolo_id' => 11,
+				'inizio'    => '2026-10-08 21:00:00',
+				'locale_id' => 22,
+				'source'    => 'api',
+			),
+			array( '%d', '%d', '%s', '%d', '%s' )
+		);
+		$event_id = (int) self::$db->insert_id;
+		self::$db->query( "ALTER TABLE {$table} DROP COLUMN url_acquisto" );
+		update_option( 'cinebot_wp_db_version', '1.0.0', false );
+
+		$installer->upgradeIfNeeded();
+
+		$this->assert_nullable_column( 'eventi', 'url_acquisto' );
+		$this->assert_column_type( 'eventi', 'url_acquisto', 'varchar(500)' );
+		$row = self::$db->get_row( self::$db->prepare( "SELECT * FROM {$table} WHERE id = %d", $event_id ) );
+		self::assertIsObject( $row );
+		self::assertSame( '777', (string) $row->idevento );
+		self::assertSame( '2026-10-08 21:00:00', $row->inizio );
+		self::assertNull( $row->url_acquisto );
+		self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
+	}
+
+	/** Current or newer schema versions never invoke installation or downgrade. */
+	public function test_upgrade_if_needed_is_a_no_op_for_current_or_newer_versions(): void {
+		$db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			/** @var int */
+			public $engine_checks = 0;
+
+			public function get_results( $query = null, $output = OBJECT ) {
+				if ( 'SHOW ENGINES' === $query ) {
+					++$this->engine_checks;
+				}
+				return parent::get_results( $query, $output );
+			}
+		};
+		$db->set_prefix( self::$db->prefix );
+
+		try {
+			$installer = new SchemaInstaller( $db );
+			update_option( 'cinebot_wp_db_version', SchemaInstaller::DB_VERSION, false );
+			$installer->upgradeIfNeeded();
+			update_option( 'cinebot_wp_db_version', '9.0.0', false );
+			$installer->upgradeIfNeeded();
+			self::assertSame( 0, $db->engine_checks );
+			self::assertSame( '9.0.0', get_option( 'cinebot_wp_db_version' ) );
+		} finally {
+			$db->close();
+		}
+	}
+
 	/**
 	 * Verifies a failed partial seed rolls back and can be retried completely.
 	 */

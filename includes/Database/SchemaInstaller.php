@@ -26,6 +26,16 @@ final class SchemaInstaller {
 		$this->db = $db;
 	}
 
+	/** Install only when the stored schema is older than the current schema. */
+	public function upgradeIfNeeded(): void {
+		$installed = get_option( 'cinebot_wp_db_version', '' );
+		if ( is_string( $installed ) && version_compare( $installed, self::DB_VERSION, '>=' ) ) {
+			return;
+		}
+
+		$this->install();
+	}
+
 	/**
 	 * Install or update the database schema.
 	 *

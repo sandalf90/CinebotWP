@@ -31,6 +31,7 @@ use CinebotWp\Services\ApiClient;
 use CinebotWp\Services\CronScheduler;
 use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
+use Throwable;
 
 final class Plugin {
 	/**
@@ -78,7 +79,7 @@ final class Plugin {
 	}
 
 	/**
-	 * Boot the plugin once.
+	 * Boot the plugin once, after confirming its schema is current.
 	 */
 	public function boot(): void {
 		if ( $this->booted ) {
@@ -86,10 +87,38 @@ final class Plugin {
 		}
 
 		$this->booted = true;
+		if ( ! $this->upgrade_schema() ) {
+			return;
+		}
+
 		self::scheduler()->register();
 		self::admin_menu()->register();
 		self::shortcodes()->register();
 		do_action( 'cinebot_wp_booted' );
+	}
+
+	/** Upgrade the schema or contain the failure to this plugin's boot. */
+	private function upgrade_schema(): bool {
+		global $wpdb;
+
+		try {
+			( new SchemaInstaller( $wpdb ) )->upgradeIfNeeded();
+			return true;
+		} catch ( Throwable $ignored ) {
+			add_action( 'admin_notices', array( $this, 'render_schema_upgrade_error' ) );
+			return false;
+		}
+	}
+
+	/** Render a safe upgrade failure notice to administrators only. */
+	public function render_schema_upgrade_error(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		echo '<div class="notice notice-error"><p>'
+			. esc_html__( 'Cinebot WP could not update its database. The plugin will retry automatically on the next request.', 'cinebot-wp' )
+			. '</p></div>';
 	}
 
 	/** Compose the synchronization scheduler at the plugin boundary. */
