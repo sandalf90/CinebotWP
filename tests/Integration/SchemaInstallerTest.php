@@ -212,18 +212,18 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 				);
 			}
 
-		self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
-		self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
-		self::assertFalse( get_option( 'cinebot_wp_db_version' ) );
+			self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
+			self::assertFalse( get_option( 'cinebot_wp_db_version' ) );
 
-		$installer->install();
+			$installer->install();
 
-		self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
-		self::assertSame(
-			array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
-			$db->transaction_queries
-		);
-		self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
+			self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame(
+				array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
+				$db->transaction_queries
+			);
+			self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
 		} finally {
 			$db->close();
 		}
