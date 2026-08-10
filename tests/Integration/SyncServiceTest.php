@@ -56,6 +56,10 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertSame( 50, $title->frontendId );
 		self::assertSame( 'https://ticket.cinebot.it/martinovich/titolo/491/locandina', $title->locandinaUrl );
 		self::assertSame( 'api', $event->source );
+		self::assertSame(
+			'https://ticket.cinebot.it/martinovich/evento/2920/acquista',
+			$event->urlAcquisto
+		);
 		self::assertSame( 3, $event->stato );
 		self::assertSame( 'Cinema Martinovich', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
 		$sector = ( new SettoreRepository( self::$db ) )->findByEventoId( $event->id )[0];
@@ -76,8 +80,27 @@ final class SyncServiceTest extends WP_UnitTestCase {
 
 		self::assertTrue( $result->isSuccess() );
 		self::assertSame( 0, $result->stats()['titoli_updated'] );
+		self::assertSame( 0, $result->stats()['eventi_updated'] );
 		self::assertSame( 17, ( new TitoloRepository( self::$db ) )->count() );
 		self::assertSame( $first_hash, ( new SyncLogRepository( self::$db ) )->latest()->payloadHash );
+	}
+
+	/** A changed envelope path refreshes the event purchase URL exactly once. */
+	public function test_changed_path_updates_purchase_url_and_event_stats(): void {
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'] = array( $payload['programmazione'][0]['titoli'][0] );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+
+		$payload['programmazione'][0]['path'] = 'sala nuova';
+		$result = $this->service()->syncPayload( $payload );
+		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+
+		self::assertTrue( $result->isSuccess() );
+		self::assertSame( 1, $result->stats()['eventi_updated'] );
+		self::assertSame(
+			'https://ticket.cinebot.it/sala%20nuova/evento/2920/acquista',
+			$event->urlAcquisto
+		);
 	}
 
 	/** Invalid input creates no hierarchy rows and reports a safe error. */
@@ -91,6 +114,79 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertStringNotContainsString( 'idevento', $result->message() );
 		self::assertSame( 0, ( new TitoloRepository( self::$db ) )->count() );
 		self::assertSame( 'error', ( new SyncLogRepository( self::$db ) )->latest()->status );
+	}
+
+	/** The first sync after upgrade backfills an existing null purchase URL. */
+	public function test_next_sync_backfills_existing_null_purchase_url(): void {
+		$payload = $this->fixture();
+		$payload['programmazione'][0]['titoli'] = array( $payload['programmazione'][0]['titoli'][0] );
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+		self::$db->update(
+			self::$db->prefix . 'cinebot_eventi',
+			array( 'url_acquisto' => null ),
+			array( 'id' => $event->id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$result = $this->service()->syncPayload( $payload );
+		$stored = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+
+		self::assertTrue( $result->isSuccess() );
+		self::assertSame( 1, $result->stats()['eventi_updated'] );
+		self::assertSame(
+			'https://ticket.cinebot.it/martinovich/evento/2920/acquista',
+			$stored->urlAcquisto
+		);
+	}
+
+	/** Synchronization never replaces a purchase URL owned by a manual event. */
+	public function test_manual_event_purchase_url_remains_untouched(): void {
+		$payload = $this->fixture();
+		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
+		$event = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+		self::$db->update(
+			self::$db->prefix . 'cinebot_eventi',
+			array(
+				'source'        => 'manual',
+				'url_acquisto' => 'https://manual.example.test/acquista',
+			),
+			array( 'id' => $event->id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		$result = $this->service()->syncPayload( $payload );
+		$stored = ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 );
+
+		self::assertTrue( $result->isSuccess() );
+		self::assertSame( 'manual', $stored->source );
+		self::assertSame( 'https://manual.example.test/acquista', $stored->urlAcquisto );
+		self::assertSame( 0, $result->stats()['eventi_updated'] );
+	}
+
+	/** Missing or hostile purchase URL fields roll back without leaking payload data. */
+	public function test_invalid_purchase_url_base_rolls_back_safely(): void {
+		$missing_host = $this->fixture();
+		$missing_host['programmazione'][0]['titoli'] = array( $missing_host['programmazione'][0]['titoli'][0] );
+		$missing_host['programmazione'][0]['titoli'][0]['locandina'] = 0;
+		unset( $missing_host['programmazione'][0]['host'] );
+
+		$hostile_path = $this->fixture();
+		$hostile_path['programmazione'][0]['titoli'] = array( $hostile_path['programmazione'][0]['titoli'][0] );
+		$hostile_path['programmazione'][0]['titoli'][0]['locandina'] = 0;
+		$hostile_path['programmazione'][0]['path'] = '../secret-api-password';
+
+		foreach ( array( $missing_host, $hostile_path ) as $payload ) {
+			$result = $this->service()->syncPayload( $payload );
+			self::assertSame( 'error', $result->status() );
+			self::assertSame( 'Schedule synchronization failed.', $result->message() );
+			self::assertStringNotContainsString( 'secret-api-password', $result->message() );
+			self::assertNull( ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 ) );
+			self::assertSame( 0, ( new TitoloRepository( self::$db ) )->count() );
+			self::assertSame( 'Schedule synchronization failed.', ( new SyncLogRepository( self::$db ) )->latest()->errorMessage );
+		}
 	}
 
 	/** Top-level validation fails safely before creating a synchronization log. */

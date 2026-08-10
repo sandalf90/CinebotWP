@@ -165,8 +165,10 @@ final class SyncService {
 		if ( null !== $existing && 'manual' === $existing->source ) {
 			return;
 		}
+		$host = $this->required_string( $envelope, 'host' );
+		$path = $this->required_string( $envelope, 'path' );
 		$title = null !== $existing ? $existing : new Titolo();
-		$this->map_title( $title, $data, $envelope, $frontend, $token );
+		$this->map_title( $title, $data, $host, $path, $frontend, $token );
 		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive;
 		$title_id = $this->titles->save( $title );
 		if ( null === $existing ) {
@@ -178,7 +180,7 @@ final class SyncService {
 			if ( ! is_array( $event_data ) ) {
 				throw new InvalidArgumentException( 'Invalid event data.' );
 			}
-			$this->sync_event( $event_data, $title_id, $token, $stats );
+			$this->sync_event( $event_data, $title_id, $host, $path, $token, $stats );
 		}
 		$gone_events = $this->events->deactivateUnseenApi( $title_id, $token );
 		$gone_sectors = $this->sectors->deactivateByEventoIds( $gone_events );
@@ -186,7 +188,7 @@ final class SyncService {
 	}
 
 	/** Persist one event, its venue, sectors, and prices. */
-	private function sync_event( array $data, int $title_id, string $token, array &$stats ): void {
+	private function sync_event( array $data, int $title_id, string $host, string $path, string $token, array &$stats ): void {
 		$remote = $this->positive_int( $data['idevento'] ?? null, 'event' );
 		$existing = $this->events->findByRemoteId( $remote );
 		if ( null !== $existing && 'manual' === $existing->source ) {
@@ -194,6 +196,7 @@ final class SyncService {
 		}
 		$event = null !== $existing ? $existing : new Evento();
 		$event->idevento = $remote;
+		$event->urlAcquisto = $this->urls->buildAcquisto( $host, $path, $remote );
 		$event->titoloId = $title_id;
 		$event->inizio = $this->required_string( $data, 'inizio' );
 		$event->organizzatoreId = $this->nullable_int( $data, 'organizzatoreId' );
@@ -269,7 +272,7 @@ final class SyncService {
 	}
 
 	/** Map all title DTO fields from its API representation. */
-	private function map_title( Titolo $title, array $data, array $envelope, int $frontend, string $token ): void {
+	private function map_title( Titolo $title, array $data, string $host, string $path, int $frontend, string $token ): void {
 		$title->idtitolo = $this->positive_int( $data['idtitolo'] ?? null, 'title' );
 		$title->frontendId = $frontend;
 		$title->titolo = $this->required_string( $data, 'titolo' );
@@ -281,8 +284,8 @@ final class SyncService {
 		$title->tipoeventoCodice = $this->nullable_string( $data, 'tipoevento' );
 		$title->locandinaFlag = $this->nullable_int( $data, 'locandina' );
 		$title->locandinaUrl = $this->urls->buildLocandina(
-			$this->required_string( $envelope, 'host' ),
-			$this->required_string( $envelope, 'path' ),
+			$host,
+			$path,
 			$title->idtitolo,
 			(int) $title->locandinaFlag
 		);
@@ -367,7 +370,17 @@ final class SyncService {
 
 	/** Compare stored and mapped event values before counting an update. */
 	private function event_changed( Evento $old, Evento $new ): bool {
-		return $old->titoloId !== $new->titoloId || $old->inizio !== $new->inizio || $old->organizzatoreId !== $new->organizzatoreId || $old->organizzatoreCf !== $new->organizzatoreCf || $old->localeId !== $new->localeId || $old->stato !== $new->stato || $old->otp !== $new->otp || $old->controlloaccessi !== $new->controlloaccessi || $old->mappa !== $new->mappa || 1 !== $old->syncActive;
+		return $old->titoloId !== $new->titoloId
+			|| $old->urlAcquisto !== $new->urlAcquisto
+			|| $old->inizio !== $new->inizio
+			|| $old->organizzatoreId !== $new->organizzatoreId
+			|| $old->organizzatoreCf !== $new->organizzatoreCf
+			|| $old->localeId !== $new->localeId
+			|| $old->stato !== $new->stato
+			|| $old->otp !== $new->otp
+			|| $old->controlloaccessi !== $new->controlloaccessi
+			|| $old->mappa !== $new->mappa
+			|| 1 !== $old->syncActive;
 	}
 
 	/** Produce a key-order-independent SHA-256 payload hash. */
