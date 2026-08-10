@@ -167,7 +167,7 @@ final class SyncService {
 		}
 		$host = $this->required_string( $envelope, 'host' );
 		$path = $this->required_string( $envelope, 'path' );
-		$title = null !== $existing ? $existing : new Titolo();
+		$title = null !== $existing ? clone $existing : new Titolo();
 		$this->map_title( $title, $data, $host, $path, $frontend, $token );
 		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive;
 		$title_id = $this->titles->save( $title );
@@ -194,7 +194,7 @@ final class SyncService {
 		if ( null !== $existing && 'manual' === $existing->source ) {
 			return;
 		}
-		$event = null !== $existing ? $existing : new Evento();
+		$event = null !== $existing ? clone $existing : new Evento();
 		$event->idevento = $remote;
 		$event->urlAcquisto = $this->urls->buildAcquisto( $host, $path, $remote );
 		$event->titoloId = $title_id;
