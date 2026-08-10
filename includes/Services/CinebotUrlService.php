@@ -1,6 +1,6 @@
 <?php
 /**
- * Cinebot poster URL builder.
+ * Safe Cinebot URL construction.
  *
  * @package CinebotWp
  */
@@ -9,20 +9,28 @@ namespace CinebotWp\Services;
 
 use InvalidArgumentException;
 
-/**
- * Builds deterministic HTTPS URLs from validated API poster fields.
- */
-final class LocandinaService {
-	private const SAFE_ERROR = 'Unable to build poster URL.';
+/** Builds deterministic HTTPS URLs from validated Cinebot API fields. */
+final class CinebotUrlService {
+	private const SAFE_ERROR = 'Unable to build Cinebot URL.';
+	private const MAX_URL_LENGTH = 500;
 
-	/**
-	 * Builds a poster URL when the API flag enables one.
-	 */
-	public function build( string $host, string $path, int $titleId, int $flag ): ?string {
+	/** Build a poster URL when the API flag enables one. */
+	public function buildLocandina( string $host, string $path, int $titleId, int $flag ): ?string {
 		if ( $flag <= 0 ) {
 			return null;
 		}
-		if ( $titleId <= 0 ) {
+
+		return $this->buildUrl( $host, $path, 'titolo', $titleId, 'locandina' );
+	}
+
+	/** Build the purchase URL for one positive remote event identity. */
+	public function buildAcquisto( string $host, string $path, int $eventId ): string {
+		return $this->buildUrl( $host, $path, 'evento', $eventId, 'acquista' );
+	}
+
+	/** Validate the shared base and append one fixed Cinebot endpoint. */
+	private function buildUrl( string $host, string $path, string $resource, int $remoteId, string $action ): string {
+		if ( $remoteId <= 0 ) {
 			throw new InvalidArgumentException( self::SAFE_ERROR );
 		}
 
@@ -45,12 +53,15 @@ final class LocandinaService {
 		}
 		unset( $segment );
 
-		return 'https://' . $host . '/' . implode( '/', $segments ) . '/titolo/' . $titleId . '/locandina';
+		$url = 'https://' . $host . '/' . implode( '/', $segments ) . '/' . $resource . '/' . $remoteId . '/' . $action;
+		if ( strlen( $url ) > self::MAX_URL_LENGTH ) {
+			throw new InvalidArgumentException( self::SAFE_ERROR );
+		}
+
+		return $url;
 	}
 
-	/**
-	 * Checks a DNS hostname without accepting ports, IPs, or localhost.
-	 */
+	/** Check a DNS hostname without accepting ports, IPs, or localhost. */
 	private function isValidHost( string $host ): bool {
 		if (
 			'' === $host
@@ -75,9 +86,7 @@ final class LocandinaService {
 		return true;
 	}
 
-	/**
-	 * Checks one relative path segment before URL encoding.
-	 */
+	/** Check one relative path segment before URL encoding. */
 	private function isValidSegment( string $segment ): bool {
 		return '' !== $segment
 			&& '.' !== $segment

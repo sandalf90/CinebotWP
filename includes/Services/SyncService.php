@@ -42,8 +42,8 @@ final class SyncService {
 	private $logs;
 	/** @var SyncLock */
 	private $lock;
-	/** @var LocandinaService */
-	private $posters;
+	/** @var CinebotUrlService */
+	private $urls;
 
 	/** Create the service with concrete defaults and injectable test collaborators. */
 	public function __construct(
@@ -56,7 +56,7 @@ final class SyncService {
 		?LocaleRepository $venues = null,
 		?SyncLogRepository $logs = null,
 		?SyncLock $lock = null,
-		?LocandinaService $posters = null
+		?CinebotUrlService $urls = null
 	) {
 		$this->db      = $db;
 		$this->api     = $api;
@@ -67,7 +67,7 @@ final class SyncService {
 		$this->venues  = $venues ?? new LocaleRepository( $db );
 		$this->logs    = $logs ?? new SyncLogRepository( $db );
 		$this->lock    = $lock ?? new SyncLock( $db );
-		$this->posters = $posters ?? new LocandinaService();
+		$this->urls = $urls ?? new CinebotUrlService();
 	}
 
 	/** Fetch and synchronize the configured remote programming payload. */
@@ -280,7 +280,12 @@ final class SyncService {
 		$title->descrizione = $this->nullable_string( $data, 'descrizione' );
 		$title->tipoeventoCodice = $this->nullable_string( $data, 'tipoevento' );
 		$title->locandinaFlag = $this->nullable_int( $data, 'locandina' );
-		$title->locandinaUrl = $this->posters->build( $this->required_string( $envelope, 'host' ), $this->required_string( $envelope, 'path' ), $title->idtitolo, (int) $title->locandinaFlag );
+		$title->locandinaUrl = $this->urls->buildLocandina(
+			$this->required_string( $envelope, 'host' ),
+			$this->required_string( $envelope, 'path' ),
+			$title->idtitolo,
+			(int) $title->locandinaFlag
+		);
 		$title->cinetel = $this->nullable_string( $data, 'cinetel' );
 		$title->tmdb = $this->nullable_string( $data, 'tmdb' );
 		$title->trailer = $this->nullable_string( $data, 'trailer' );
