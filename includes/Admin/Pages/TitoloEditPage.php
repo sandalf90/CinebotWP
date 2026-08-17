@@ -71,11 +71,16 @@ final class TitoloEditPage {
 	/**
 	 * Render the editor form.
 	 *
-	 * @param int|null $id Title ID for editing, null for a new form.
+	 * WordPress do_action always passes an empty string as the first
+	 * argument to page callbacks, so $id may be int, string, or null.
+	 *
+	 * @param mixed $id Title ID for editing, null/empty for a new form.
 	 */
-	public function render( ?int $id = null ): void {
-		if ( null === $id ) {
+	public function render( $id = null ): void {
+		if ( null === $id || '' === $id ) {
 			$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification -- read-only.
+		} else {
+			$id = (int) $id;
 		}
 
 		$title   = new Titolo();
