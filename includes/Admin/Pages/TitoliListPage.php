@@ -47,15 +47,6 @@ final class TitoliListPage extends \WP_List_Table {
 		PrezzoRepository $prices,
 		TipologiaRepository $types
 	) {
-		parent::__construct(
-			array(
-				'plural'   => 'titoli',
-				'singular' => 'titolo',
-				'ajax'     => false,
-				'screen'   => 'cinebot-wp-programmazioni',
-			)
-		);
-
 		$this->titles  = $titles;
 		$this->events  = $events;
 		$this->sectors = $sectors;
@@ -65,6 +56,16 @@ final class TitoliListPage extends \WP_List_Table {
 
 	/** Render the page wrapper, notices, filters, and list table. */
 	public function render(): void {
+		if ( ! isset( $this->_args['plural'] ) ) {
+			parent::__construct(
+				array(
+					'plural'   => 'titoli',
+					'singular' => 'titolo',
+					'ajax'     => false,
+					'screen'   => 'cinebot-wp-programmazioni',
+				)
+			);
+		}
 		$this->handle_actions();
 		$this->prepare_items();
 		?>
