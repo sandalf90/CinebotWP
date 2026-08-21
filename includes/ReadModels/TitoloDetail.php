@@ -21,6 +21,8 @@ final class TitoloDetail {
 
 	public ?string $prezzoDa = null;
 	public ?string $prezzoA = null;
+	public ?string $prevenditaDa = null;
+	public ?string $prevenditaA = null;
 	public int $eventiCount = 0;
 	public int $giorniCount = 0;
 	public ?string $primoGiorno = null;

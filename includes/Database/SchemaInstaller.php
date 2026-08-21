@@ -14,7 +14,7 @@ use wpdb;
  * Installs the plugin's custom tables and initial data.
  */
 final class SchemaInstaller {
-	public const DB_VERSION = '1.2.0';
+	public const DB_VERSION = '1.3.0';
 
 	/** @var wpdb */
 	private $db;
@@ -117,6 +117,8 @@ final class SchemaInstaller {
 				tag text NULL,
 				prezzo_da decimal(10,2) NULL,
 				prezzo_a decimal(10,2) NULL,
+				prevendita_da decimal(10,2) NULL,
+				prevendita_a decimal(10,2) NULL,
 				source varchar(10) NOT NULL DEFAULT 'api',
 				sync_hash varchar(64) NULL,
 				sync_active tinyint(1) unsigned NOT NULL DEFAULT 1,

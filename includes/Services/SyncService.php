@@ -158,6 +158,8 @@ final class SyncService {
 
 		$prezzo_min = null;
 		$prezzo_max = null;
+		$prevendita_min = null;
+		$prevendita_max = null;
 		foreach ( $this->child_array( $data, 'eventi' ) as $event_data ) {
 			foreach ( $this->child_array( $event_data, 'settori' ) as $sector_data ) {
 				foreach ( $this->child_array( $sector_data, 'prezzi' ) as $price_data ) {
@@ -169,14 +171,25 @@ final class SyncService {
 						if ( null === $prezzo_max || $importo > $prezzo_max ) {
 							$prezzo_max = $importo;
 						}
+						if ( isset( $price_data['prevendita'] ) ) {
+							$prevendita = (float) $price_data['prevendita'];
+							if ( null === $prevendita_min || $prevendita < $prevendita_min ) {
+								$prevendita_min = $prevendita;
+							}
+							if ( null === $prevendita_max || $prevendita > $prevendita_max ) {
+								$prevendita_max = $prevendita;
+							}
+						}
 					}
 				}
 			}
 		}
 		$title->prezzoDa = null !== $prezzo_min ? number_format( $prezzo_min, 2, '.', '' ) : null;
 		$title->prezzoA  = null !== $prezzo_max ? number_format( $prezzo_max, 2, '.', '' ) : null;
+		$title->prevenditaDa = null !== $prevendita_min ? number_format( $prevendita_min, 2, '.', '' ) : null;
+		$title->prevenditaA  = null !== $prevendita_max ? number_format( $prevendita_max, 2, '.', '' ) : null;
 
-		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive || $existing->prezzoDa !== $title->prezzoDa || $existing->prezzoA !== $title->prezzoA;
+		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive || $existing->prezzoDa !== $title->prezzoDa || $existing->prezzoA !== $title->prezzoA || $existing->prevenditaDa !== $title->prevenditaDa || $existing->prevenditaA !== $title->prevenditaA;
 		$title_id = $this->titles->save( $title );
 		if ( null === $existing ) {
 			++$stats['titoli_added'];

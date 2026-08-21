@@ -24,6 +24,8 @@ final class ProgrammazioneCard {
 	public ?string $comune;
 	public ?string $prezzoDa;
 	public ?string $prezzoA;
+	public ?string $prevenditaDa;
+	public ?string $prevenditaA;
 
 	/**
 	 * Hydrate the public projection from its joined database row.
@@ -45,6 +47,8 @@ final class ProgrammazioneCard {
 		$model->comune           = isset( $row['comune'] ) ? (string) $row['comune'] : null;
 		$model->prezzoDa         = isset( $row['prezzo_da'] ) ? (string) $row['prezzo_da'] : null;
 		$model->prezzoA          = isset( $row['prezzo_a'] ) ? (string) $row['prezzo_a'] : null;
+		$model->prevenditaDa     = isset( $row['prevendita_da'] ) ? (string) $row['prevendita_da'] : null;
+		$model->prevenditaA      = isset( $row['prevendita_a'] ) ? (string) $row['prevendita_a'] : null;
 
 		return $model;
 	}

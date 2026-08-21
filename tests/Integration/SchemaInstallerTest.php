@@ -106,8 +106,14 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		$this->assert_nullable_column( 'titoli', 'frontend_id' );
 		$this->assert_nullable_column( 'titoli', 'prezzo_da' );
 		$this->assert_nullable_column( 'titoli', 'prezzo_a' );
+		$this->assert_nullable_column( 'titoli', 'prevendita_da' );
+		$this->assert_nullable_column( 'titoli', 'prevendita_a' );
 		$this->assert_column_type( 'titoli', 'prezzo_da', 'decimal(10,2)' );
 		$this->assert_column_type( 'titoli', 'prezzo_a', 'decimal(10,2)' );
+		$this->assert_nullable_column( 'titoli', 'prevendita_da' );
+		$this->assert_nullable_column( 'titoli', 'prevendita_a' );
+		$this->assert_column_type( 'titoli', 'prevendita_da', 'decimal(10,2)' );
+		$this->assert_column_type( 'titoli', 'prevendita_a', 'decimal(10,2)' );
 		$this->assert_nullable_column( 'eventi', 'idevento' );
 		$this->assert_nullable_column( 'locali', 'locale_id_remoto' );
 
@@ -179,7 +185,7 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		);
 		$event_id = (int) self::$db->insert_id;
 		self::$db->query( "ALTER TABLE {$table} DROP COLUMN url_acquisto" );
-		self::$db->query( "ALTER TABLE {$titles_table} DROP COLUMN prezzo_da, DROP COLUMN prezzo_a" );
+		self::$db->query( "ALTER TABLE {$titles_table} DROP COLUMN prezzo_da, DROP COLUMN prezzo_a, DROP COLUMN prevendita_da, DROP COLUMN prevendita_a" );
 		self::$db->query( "CREATE TABLE " . self::$db->prefix . 'cinebot_settori (id bigint(20) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id)) ENGINE=InnoDB' );
 		self::$db->query( "CREATE TABLE " . self::$db->prefix . 'cinebot_prezzi (id bigint(20) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id)) ENGINE=InnoDB' );
 		update_option( 'cinebot_wp_db_version', '1.1.0', false );

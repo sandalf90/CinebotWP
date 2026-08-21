@@ -256,8 +256,10 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 				'locale_id' => $rome,
 				'locale_nome' => 'Rome Hall',
 				'comune' => 'Roma',
-				'prezzo_da' => '10.00',
-				'prezzo_a' => '20.00',
+			'prezzo_da' => '10.00',
+			'prezzo_a' => '20.00',
+			'prevendita_da' => null,
+			'prevendita_a' => null,
 			),
 			$this->card_to_array( $cards[0] )
 		);
@@ -473,6 +475,8 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 			'comune' => $card->comune,
 			'prezzo_da' => $card->prezzoDa,
 			'prezzo_a' => $card->prezzoA,
+			'prevendita_da' => $card->prevenditaDa,
+			'prevendita_a' => $card->prevenditaA,
 		);
 	}
 

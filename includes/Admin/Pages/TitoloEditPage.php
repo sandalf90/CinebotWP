@@ -207,10 +207,18 @@ final class TitoloEditPage {
 					<th scope="row"><label for="cinebot-prezzo-da"><?php esc_html_e( 'Prezzo da (€)', 'cinebot-wp' ); ?></label></th>
 					<td><input type="text" id="cinebot-prezzo-da" name="prezzo_da" value="<?php echo esc_attr( $title->prezzoDa ?? '' ); ?>" class="regular-text" /></td>
 				</tr>
-				<tr>
-					<th scope="row"><label for="cinebot-prezzo-a"><?php esc_html_e( 'Prezzo a (€)', 'cinebot-wp' ); ?></label></th>
-					<td><input type="text" id="cinebot-prezzo-a" name="prezzo_a" value="<?php echo esc_attr( $title->prezzoA ?? '' ); ?>" class="regular-text" /></td>
-				</tr>
+			<tr>
+				<th scope="row"><label for="cinebot-prezzo-a"><?php esc_html_e( 'Prezzo a (€)', 'cinebot-wp' ); ?></label></th>
+				<td><input type="text" id="cinebot-prezzo-a" name="prezzo_a" value="<?php echo esc_attr( $title->prezzoA ?? '' ); ?>" class="regular-text" /></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="cinebot-prevendita-da"><?php esc_html_e( 'Prevendita da (€)', 'cinebot-wp' ); ?></label></th>
+				<td><input type="text" id="cinebot-prevendita-da" name="prevendita_da" value="<?php echo esc_attr( $title->prevenditaDa ?? '' ); ?>" class="regular-text" /></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="cinebot-prevendita-a"><?php esc_html_e( 'Prevendita a (€)', 'cinebot-wp' ); ?></label></th>
+				<td><input type="text" id="cinebot-prevendita-a" name="prevendita_a" value="<?php echo esc_attr( $title->prevenditaA ?? '' ); ?>" class="regular-text" /></td>
+			</tr>
 				<tr>
 					<th scope="row"><label for="cinebot-descrizione"><?php esc_html_e( 'Descrizione', 'cinebot-wp' ); ?></label></th>
 					<td><textarea id="cinebot-descrizione" name="descrizione" rows="5" class="large-text"><?php echo esc_textarea( $title->descrizione ?? '' ); ?></textarea></td>
@@ -402,6 +410,8 @@ final class TitoloEditPage {
 		$title->cast             = $this->nullable_text( $post['cast'] ?? null );
 		$title->prezzoDa         = $this->nullable_decimal( $post['prezzo_da'] ?? null );
 		$title->prezzoA          = $this->nullable_decimal( $post['prezzo_a'] ?? null );
+		$title->prevenditaDa     = $this->nullable_decimal( $post['prevendita_da'] ?? null );
+		$title->prevenditaA      = $this->nullable_decimal( $post['prevendita_a'] ?? null );
 		$title->tag              = $this->parse_tags( $post['tag'] ?? '' );
 
 		if ( $title_id > 0 ) {

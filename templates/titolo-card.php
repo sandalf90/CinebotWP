@@ -43,17 +43,21 @@ if ( ! empty( $detail_url ) ) {
 					<span class="cinebot-card-tipo"><?php echo esc_html( $card->tipoDescrizione ); ?></span>
 				<?php endif; ?>
 			</p>
-			<?php if ( $card->prezzoDa || $card->prezzoA ) : ?>
-				<p class="cinebot-card-prezzo">
-					<?php
-					if ( $card->prezzoDa === $card->prezzoA ) {
-						echo '€' . esc_html( $card->prezzoDa );
-					} else {
-						echo '€' . esc_html( $card->prezzoDa ) . ' - €' . esc_html( $card->prezzoA );
-					}
-					?>
-				</p>
-			<?php endif; ?>
+		<?php if ( $card->prezzoDa || $card->prezzoA ) : ?>
+			<?php
+			$eff_da = null !== $card->prezzoDa ? (float) $card->prezzoDa - (float) ( $card->prevenditaDa ?? 0 ) : null;
+			$eff_a  = null !== $card->prezzoA ? (float) $card->prezzoA - (float) ( $card->prevenditaA ?? 0 ) : null;
+			?>
+			<p class="cinebot-card-prezzo">
+				<?php
+				if ( $eff_da === $eff_a ) {
+					echo '€' . esc_html( number_format( (float) ( $eff_da ?? $eff_a ), 2, '.', ',' ) );
+				} else {
+					echo '€' . esc_html( number_format( (float) $eff_da, 2, '.', ',' ) ) . ' - €' . esc_html( number_format( (float) $eff_a, 2, '.', ',' ) );
+				}
+				?>
+			</p>
+		<?php endif; ?>
 			<?php if ( $show_desc && $card->descrizione ) : ?>
 				<p class="cinebot-card-desc"><?php echo esc_html( wp_trim_words( $card->descrizione, 30 ) ); ?></p>
 			<?php endif; ?>

@@ -98,6 +98,8 @@ final class TitoloRepository {
 		sort( $days );
 		$detail->prezzoDa     = $title->prezzoDa;
 		$detail->prezzoA      = $title->prezzoA;
+		$detail->prevenditaDa = $title->prevenditaDa;
+		$detail->prevenditaA  = $title->prevenditaA;
 		$detail->giorniCount  = count( $days );
 		$detail->primoGiorno  = $days ? $days[0] : null;
 		$detail->ultimoGiorno = $days ? $days[ count( $days ) - 1 ] : null;
@@ -141,13 +143,15 @@ final class TitoloRepository {
 			'tag' => $tag,
 			'prezzo_da' => $title->prezzoDa,
 			'prezzo_a' => $title->prezzoA,
+			'prevendita_da' => $title->prevenditaDa,
+			'prevendita_a' => $title->prevenditaA,
 			'source' => $title->source,
 			'sync_hash' => $title->syncHash,
 			'sync_active' => $manual ? 1 : $title->syncActive,
 			'last_seen_sync' => $manual ? null : $title->lastSeenSync,
 			'updated_at' => $now,
 		);
-		$formats = array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
+		$formats = array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		if ( null === $title->id ) {
 			$data['created_at'] = $now;
@@ -371,7 +375,7 @@ final class TitoloRepository {
 	/** Return the fixed public projection and active-price subquery. */
 	private function public_projection_sql(): string {
 		$base = $this->db->prefix . 'cinebot_';
-		return "SELECT e.id evento_id, e.inizio, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, l.nome locale_nome, l.comune, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a FROM {$base}eventi e";
+		return "SELECT e.id evento_id, e.inizio, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, l.nome locale_nome, l.comune, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a, t.prevendita_da as prevendita_da, t.prevendita_a as prevendita_a FROM {$base}eventi e";
 	}
 
 	/**

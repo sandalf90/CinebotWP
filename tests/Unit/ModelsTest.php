@@ -46,8 +46,10 @@ final class ModelsTest extends TestCase {
 					'trailer'             => 'https://example.test/trailer',
 					'cast'                => 'Interprete',
 					'tag'                 => array( 'teatro', 'prosa' ),
-					'prezzo_da'           => '10.00',
-					'prezzo_a'            => '20.00',
+				'prezzo_da'           => '10.00',
+				'prezzo_a'            => '20.00',
+				'prevendita_da'       => '1.00',
+				'prevendita_a'        => '2.00',
 					'source'              => 'api',
 					'sync_hash'           => 'payload-hash',
 					'sync_active'         => true,
@@ -230,6 +232,8 @@ final class ModelsTest extends TestCase {
 		self::assertNull( $card->comune );
 		self::assertNull( $card->prezzoDa );
 		self::assertNull( $card->prezzoA );
+		self::assertNull( $card->prevenditaDa );
+		self::assertNull( $card->prevenditaA );
 	}
 
 	/**

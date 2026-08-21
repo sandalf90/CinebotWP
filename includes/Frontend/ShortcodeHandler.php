@@ -347,6 +347,9 @@ final class ShortcodeHandler {
 	/**
 	 * [cinebot_titolo_prezzo] — smart price display.
 	 *
+	 * The prevendita fee is subtracted from the prezzo so that the face
+	 * value is shown, with "+ d.d.p." indicating presale rights apply.
+	 *
 	 * Single price → "€ 20.00 + d.d.p."
 	 * Range → "Da € 25.00 a € 35.00 +d.d.p."
 	 */
@@ -355,8 +358,8 @@ final class ShortcodeHandler {
 		if ( null === $detail ) {
 			return '';
 		}
-		$min = $detail->prezzoDa;
-		$max = $detail->prezzoA;
+		$min = $this->effectivePrezzo( $detail->prezzoDa, $detail->prevenditaDa );
+		$max = $this->effectivePrezzo( $detail->prezzoA, $detail->prevenditaA );
 		if ( null === $min && null === $max ) {
 			return '';
 		}
@@ -365,6 +368,24 @@ final class ShortcodeHandler {
 			return '€ ' . esc_html( $this->formatPrezzo( (string) $price ) ) . ' + d.d.p.';
 		}
 		return 'Da € ' . esc_html( $this->formatPrezzo( (string) $min ) ) . ' a € ' . esc_html( $this->formatPrezzo( (string) $max ) ) . ' +d.d.p.';
+	}
+
+	/**
+	 * Subtract the prevendita fee from the prezzo to get the face value.
+	 *
+	 * @param string|null $prezzo     Full price (importo).
+	 * @param string|null $prevendita Presale fee included in the prezzo.
+	 * @return float|null Null when the prezzo itself is null.
+	 */
+	private function effectivePrezzo( ?string $prezzo, ?string $prevendita ): ?float {
+		if ( null === $prezzo ) {
+			return null;
+		}
+		$val = (float) $prezzo;
+		if ( null !== $prevendita ) {
+			$val -= (float) $prevendita;
+		}
+		return $val;
 	}
 
 	/** [cinebot_titolo_locale] — render the venue name(s). */

@@ -136,6 +136,8 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'name="tipoevento_codice"', $output );
 		self::assertStringContainsString( 'name="prezzo_da"', $output );
 		self::assertStringContainsString( 'name="prezzo_a"', $output );
+		self::assertStringContainsString( 'name="prevendita_da"', $output );
+		self::assertStringContainsString( 'name="prevendita_a"', $output );
 		self::assertStringContainsString( 'name="descrizione"', $output );
 		self::assertStringContainsString( 'name="locandina_url"', $output );
 		self::assertStringContainsString( 'name="cinetel"', $output );
