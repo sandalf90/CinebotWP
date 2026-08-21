@@ -14,7 +14,7 @@ use wpdb;
  * Installs the plugin's custom tables and initial data.
  */
 final class SchemaInstaller {
-	public const DB_VERSION = '1.1.0';
+	public const DB_VERSION = '1.2.0';
 
 	/** @var wpdb */
 	private $db;
@@ -57,6 +57,12 @@ final class SchemaInstaller {
 			dbDelta( $statement );
 		}
 
+		// Remove deprecated tables in child-first order.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$this->db->query( "DROP TABLE IF EXISTS {$this->db->prefix}cinebot_prezzi" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$this->db->query( "DROP TABLE IF EXISTS {$this->db->prefix}cinebot_settori" );
+
 		$this->seed_event_types();
 		$this->store_version();
 	}
@@ -81,7 +87,7 @@ final class SchemaInstaller {
 	}
 
 	/**
-	 * Return the seven dbDelta statements.
+	 * Return the five dbDelta statements.
 	 *
 	 * @return string[]
 	 */
@@ -109,6 +115,8 @@ final class SchemaInstaller {
 				trailer varchar(500) NULL,
 				`cast` text NULL,
 				tag text NULL,
+				prezzo_da decimal(10,2) NULL,
+				prezzo_a decimal(10,2) NULL,
 				source varchar(10) NOT NULL DEFAULT 'api',
 				sync_hash varchar(64) NULL,
 				sync_active tinyint(1) unsigned NOT NULL DEFAULT 1,
@@ -147,42 +155,6 @@ final class SchemaInstaller {
 				KEY inizio (inizio),
 				KEY sync_active (sync_active),
 				KEY titolo_sync (titolo_id,sync_active,last_seen_sync)
-			) {$table_options};",
-			"CREATE TABLE {$base}settori (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-				idsettore bigint(20) unsigned NULL,
-				evento_id bigint(20) unsigned NOT NULL,
-				nome varchar(255) NULL,
-				source varchar(10) NOT NULL DEFAULT 'api',
-				sync_active tinyint(1) unsigned NOT NULL DEFAULT 1,
-				last_seen_sync char(36) NULL,
-				created_at datetime NULL,
-				updated_at datetime NULL,
-				PRIMARY KEY  (id),
-				KEY evento_id (evento_id),
-				KEY sync_active (sync_active),
-				UNIQUE KEY remote_evento (idsettore,evento_id),
-				KEY evento_sync (evento_id,sync_active,last_seen_sync)
-			) {$table_options};",
-			"CREATE TABLE {$base}prezzi (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-				idprezzo bigint(20) unsigned NULL,
-				settore_id bigint(20) unsigned NOT NULL,
-				nome varchar(255) NULL,
-				tipo varchar(5) NULL,
-				importo decimal(10,2) NULL,
-				prevendita decimal(10,2) NULL,
-				stato tinyint NULL,
-				source varchar(10) NOT NULL DEFAULT 'api',
-				sync_active tinyint(1) unsigned NOT NULL DEFAULT 1,
-				last_seen_sync char(36) NULL,
-				created_at datetime NULL,
-				updated_at datetime NULL,
-				PRIMARY KEY  (id),
-				KEY settore_id (settore_id),
-				KEY sync_active (sync_active),
-				UNIQUE KEY remote_settore (idprezzo,settore_id),
-				KEY settore_sync (settore_id,sync_active,last_seen_sync)
 			) {$table_options};",
 			"CREATE TABLE {$base}locali (
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

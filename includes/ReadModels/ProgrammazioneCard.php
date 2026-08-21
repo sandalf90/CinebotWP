@@ -22,8 +22,8 @@ final class ProgrammazioneCard {
 	public int $localeId;
 	public string $localeNome;
 	public ?string $comune;
-	public ?string $prezzoMin;
-	public ?string $prezzoMax;
+	public ?string $prezzoDa;
+	public ?string $prezzoA;
 
 	/**
 	 * Hydrate the public projection from its joined database row.
@@ -43,8 +43,8 @@ final class ProgrammazioneCard {
 		$model->localeId         = isset( $row['locale_id'] ) ? (int) $row['locale_id'] : 0;
 		$model->localeNome       = isset( $row['locale_nome'] ) ? (string) $row['locale_nome'] : '';
 		$model->comune           = isset( $row['comune'] ) ? (string) $row['comune'] : null;
-		$model->prezzoMin        = isset( $row['prezzo_min'] ) ? (string) $row['prezzo_min'] : null;
-		$model->prezzoMax        = isset( $row['prezzo_max'] ) ? (string) $row['prezzo_max'] : null;
+		$model->prezzoDa         = isset( $row['prezzo_da'] ) ? (string) $row['prezzo_da'] : null;
+		$model->prezzoA          = isset( $row['prezzo_a'] ) ? (string) $row['prezzo_a'] : null;
 
 		return $model;
 	}

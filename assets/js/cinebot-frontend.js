@@ -6,6 +6,7 @@
 
 		containers.forEach( function ( container ) {
 			var instance = container.getAttribute( 'data-instance' );
+			var detailUrl = container.getAttribute( 'data-detail-url' ) || '';
 			var filters = container.querySelector( '.cinebot-filters' );
 			var cardsEl = container.querySelector( '.cinebot-cards' );
 			var loadMore = container.querySelector( '.cinebot-load-more' );
@@ -18,6 +19,7 @@
 					params.append( 'action', 'cinebot_wp_filter' );
 					params.append( 'nonce', window.cinebotWpFrontend ? window.cinebotWpFrontend.nonce : '' );
 					params.append( 'instance', instance );
+					params.append( 'detail_url', detailUrl );
 					params.set( 'offset', '0' );
 
 					disableButtons( true );
@@ -49,6 +51,7 @@
 					params.append( 'action', 'cinebot_wp_filter' );
 					params.append( 'nonce', window.cinebotWpFrontend ? window.cinebotWpFrontend.nonce : '' );
 					params.append( 'instance', instance );
+					params.append( 'detail_url', detailUrl );
 					params.append( 'offset', String( ( page - 1 ) * limit ) );
 
 					loadMore.disabled = true;

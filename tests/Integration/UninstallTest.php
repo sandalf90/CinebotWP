@@ -25,8 +25,6 @@ final class UninstallTest extends WP_UnitTestCase {
 	private const TABLE_SUFFIXES = array(
 		'titoli',
 		'eventi',
-		'settori',
-		'prezzi',
 		'locali',
 		'tipologie_eventi',
 		'sync_log',
@@ -46,11 +44,14 @@ final class UninstallTest extends WP_UnitTestCase {
 	 * Verifies uninstall removes approved data and preserves unrelated data.
 	 */
 	public function test_uninstall_removes_only_approved_single_site_data(): void {
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
 		$installer       = new SchemaInstaller( self::$db );
 		$unrelated_table = self::$db->prefix . 'cinebot_unrelated';
 
 		try {
 			$installer->install();
+			self::$db->query( "DROP TABLE IF EXISTS {$unrelated_table}" );
 			self::$db->query( "CREATE TABLE {$unrelated_table} (id bigint(20) unsigned NOT NULL) ENGINE=InnoDB" );
 
 			update_option( 'cinebot_wp_settings', array( 'remove' => true ) );
@@ -69,6 +70,7 @@ final class UninstallTest extends WP_UnitTestCase {
 				define( 'WP_UNINSTALL_PLUGIN', 'cinebot-wp/cinebot-wp.php' );
 			}
 			require CINEBOT_WP_PATH . 'uninstall.php';
+			self::assertFalse( get_option( 'cinebot_wp_settings' ), 'Uninstall script did not run.' );
 
 			foreach ( self::TABLE_SUFFIXES as $suffix ) {
 				$table = self::$db->prefix . 'cinebot_' . $suffix;
@@ -100,6 +102,8 @@ final class UninstallTest extends WP_UnitTestCase {
 			wp_clear_scheduled_hook( 'cinebot_wp_sync_event' );
 			wp_clear_scheduled_hook( 'cinebot_wp_unrelated_event' );
 			self::$db->query( "DROP TABLE IF EXISTS {$unrelated_table}" );
+			add_filter( 'query', array( $this, '_create_temporary_tables' ) );
+			add_filter( 'query', array( $this, '_drop_temporary_tables' ) );
 			$installer->install();
 		}
 	}

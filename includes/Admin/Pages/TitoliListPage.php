@@ -13,8 +13,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 
 use CinebotWp\Models\Titolo;
 use CinebotWp\Repositories\EventoRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
+
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use RuntimeException;
@@ -30,11 +29,6 @@ final class TitoliListPage extends \WP_List_Table {
 	/** @var EventoRepository */
 	private $events;
 
-	/** @var SettoreRepository */
-	private $sectors;
-
-	/** @var PrezzoRepository */
-	private $prices;
 
 	/** @var TipologiaRepository */
 	private $types;
@@ -43,14 +37,10 @@ final class TitoliListPage extends \WP_List_Table {
 	public function __construct(
 		TitoloRepository $titles,
 		EventoRepository $events,
-		SettoreRepository $sectors,
-		PrezzoRepository $prices,
 		TipologiaRepository $types
 	) {
 		$this->titles  = $titles;
 		$this->events  = $events;
-		$this->sectors = $sectors;
-		$this->prices  = $prices;
 		$this->types   = $types;
 	}
 
@@ -204,9 +194,9 @@ final class TitoliListPage extends \WP_List_Table {
 	}
 
 	/**
-	 * Delete titles and cascade their prices, sectors, and events in a transaction.
+	 * Delete titles and their events in a transaction.
 	 *
-	 * Deletion order: prices -> sectors -> events -> title.
+	 * Deletion order: events -> title.
 	 *
 	 * @param array<int,mixed> $ids Title IDs.
 	 */
@@ -231,14 +221,6 @@ final class TitoliListPage extends \WP_List_Table {
 			$wpdb->query( 'START TRANSACTION' );
 
 			foreach ( $ids as $title_id ) {
-				$events = $this->events->findByTitoloId( $title_id );
-				foreach ( $events as $event ) {
-					$sectors = $this->sectors->findByEventoId( (int) $event->id );
-					foreach ( $sectors as $sector ) {
-						$this->prices->deleteBySettoreId( (int) $sector->id );
-					}
-					$this->sectors->deleteByEventoId( (int) $event->id );
-				}
 				$this->events->deleteByTitoloId( $title_id );
 				if ( ! $this->titles->delete( $title_id ) ) {
 					throw new RuntimeException( 'delete failed' );

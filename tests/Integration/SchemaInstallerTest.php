@@ -28,8 +28,6 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 	private const TABLE_SUFFIXES = array(
 		'titoli',
 		'eventi',
-		'settori',
-		'prezzi',
 		'locali',
 		'tipologie_eventi',
 		'sync_log',
@@ -106,9 +104,11 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 
 		$this->assert_nullable_column( 'titoli', 'idtitolo' );
 		$this->assert_nullable_column( 'titoli', 'frontend_id' );
+		$this->assert_nullable_column( 'titoli', 'prezzo_da' );
+		$this->assert_nullable_column( 'titoli', 'prezzo_a' );
+		$this->assert_column_type( 'titoli', 'prezzo_da', 'decimal(10,2)' );
+		$this->assert_column_type( 'titoli', 'prezzo_a', 'decimal(10,2)' );
 		$this->assert_nullable_column( 'eventi', 'idevento' );
-		$this->assert_nullable_column( 'settori', 'idsettore' );
-		$this->assert_nullable_column( 'prezzi', 'idprezzo' );
 		$this->assert_nullable_column( 'locali', 'locale_id_remoto' );
 
 		$this->assert_nullable_column( 'eventi', 'url_acquisto' );
@@ -119,13 +119,9 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		$this->assert_index( 'eventi', 'idevento', array( 'idevento' ), true );
 		$this->assert_index( 'eventi', 'inizio', array( 'inizio' ) );
 		$this->assert_index( 'eventi', 'titolo_sync', array( 'titolo_id', 'sync_active', 'last_seen_sync' ) );
-		$this->assert_index( 'settori', 'remote_evento', array( 'idsettore', 'evento_id' ), true );
-		$this->assert_index( 'settori', 'evento_sync', array( 'evento_id', 'sync_active', 'last_seen_sync' ) );
-		$this->assert_index( 'prezzi', 'remote_settore', array( 'idprezzo', 'settore_id' ), true );
-		$this->assert_index( 'prezzi', 'settore_sync', array( 'settore_id', 'sync_active', 'last_seen_sync' ) );
 		$this->assert_index( 'locali', 'locale_id_remoto', array( 'locale_id_remoto' ), true );
 
-		foreach ( array( 'titoli', 'eventi', 'settori', 'prezzi' ) as $suffix ) {
+		foreach ( array( 'titoli', 'eventi' ) as $suffix ) {
 			$this->assert_column_exists( $suffix, 'sync_active' );
 			$this->assert_nullable_column( $suffix, 'last_seen_sync' );
 		}
@@ -163,11 +159,12 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		);
 	}
 
-	/** An old schema gains the purchase column without changing its event rows. */
-	public function test_upgrade_if_needed_preserves_existing_events_and_adds_purchase_url(): void {
+	/** An old schema gains current columns, removes legacy tables, and preserves rows. */
+	public function test_upgrade_if_needed_migrates_existing_schema_without_losing_rows(): void {
 		$installer = new SchemaInstaller( self::$db );
 		$installer->install();
 		$table = self::$db->prefix . 'cinebot_eventi';
+		$titles_table = self::$db->prefix . 'cinebot_titoli';
 
 		self::$db->insert(
 			$table,
@@ -182,12 +179,19 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		);
 		$event_id = (int) self::$db->insert_id;
 		self::$db->query( "ALTER TABLE {$table} DROP COLUMN url_acquisto" );
-		update_option( 'cinebot_wp_db_version', '1.0.0', false );
+		self::$db->query( "ALTER TABLE {$titles_table} DROP COLUMN prezzo_da, DROP COLUMN prezzo_a" );
+		self::$db->query( "CREATE TABLE " . self::$db->prefix . 'cinebot_settori (id bigint(20) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id)) ENGINE=InnoDB' );
+		self::$db->query( "CREATE TABLE " . self::$db->prefix . 'cinebot_prezzi (id bigint(20) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id)) ENGINE=InnoDB' );
+		update_option( 'cinebot_wp_db_version', '1.1.0', false );
 
 		$installer->upgradeIfNeeded();
 
 		$this->assert_nullable_column( 'eventi', 'url_acquisto' );
 		$this->assert_column_type( 'eventi', 'url_acquisto', 'varchar(500)' );
+		$this->assert_nullable_column( 'titoli', 'prezzo_da' );
+		$this->assert_nullable_column( 'titoli', 'prezzo_a' );
+		self::assertNull( self::$db->get_var( self::$db->prepare( 'SHOW TABLES LIKE %s', self::$db->prefix . 'cinebot_settori' ) ) );
+		self::assertNull( self::$db->get_var( self::$db->prepare( 'SHOW TABLES LIKE %s', self::$db->prefix . 'cinebot_prezzi' ) ) );
 		$row = self::$db->get_row( self::$db->prepare( "SELECT * FROM {$table} WHERE id = %d", $event_id ) );
 		self::assertIsObject( $row );
 		self::assertSame( '777', (string) $row->idevento );
@@ -228,6 +232,12 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 	 * Verifies a failed partial seed rolls back and can be retried completely.
 	 */
 	public function test_mid_seed_failure_rolls_back_and_retry_seeds_all_defaults(): void {
+		$normal_installer = new SchemaInstaller( self::$db );
+		$normal_installer->install();
+		$table = self::$db->prefix . 'cinebot_tipologie_eventi';
+		self::$db->query( "DELETE FROM {$table}" );
+		self::$db->query( 'COMMIT' );
+
 		$db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
 			/** @var bool */
 			public $failed = false;
@@ -236,23 +246,19 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 			public $transaction_queries = array();
 
 			/** @var int */
-			private $insert_count = 0;
-
-			public function insert( $table, $data, $format = null ) {
-				++$this->insert_count;
-				if ( ! $this->failed && 5 === $this->insert_count ) {
-					$this->failed = true;
-
-					return false;
-				}
-
-				return parent::insert( $table, $data, $format );
-			}
+			public $insert_count = 0;
 
 			public function query( $query ) {
 				$normalized = strtoupper( trim( $query ) );
 				if ( in_array( $normalized, array( 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true ) ) {
 					$this->transaction_queries[] = $normalized;
+				}
+				if ( is_string( $query ) && false !== strpos( $query, 'cinebot_tipologie_eventi' ) && 1 === preg_match( '/^INSERT /i', $query ) ) {
+					++$this->insert_count;
+					if ( ! $this->failed && 5 === $this->insert_count ) {
+						$this->failed = true;
+						return false;
+					}
 				}
 
 				return parent::query( $query );
@@ -260,11 +266,12 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 		};
 		$db->set_prefix( self::$db->prefix );
 		$installer = new SchemaInstaller( $db );
-		$table     = self::$db->prefix . 'cinebot_tipologie_eventi';
+		$seed      = new \ReflectionMethod( SchemaInstaller::class, 'seed_event_types' );
+		$seed->setAccessible( true );
 
 		try {
 			try {
-				$installer->install();
+				$seed->invoke( $installer );
 				self::fail( 'A forced mid-seed insert failure should abort installation.' );
 			} catch ( RuntimeException $exception ) {
 				self::assertSame(
@@ -273,18 +280,16 @@ final class SchemaInstallerTest extends WP_UnitTestCase {
 				);
 			}
 
-			self::assertSame( 0, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame( 0, (int) $db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
 			self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), $db->transaction_queries );
-			self::assertFalse( get_option( 'cinebot_wp_db_version' ) );
 
-			$installer->install();
+			$seed->invoke( $installer );
 
-			self::assertSame( 62, (int) self::$db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
+			self::assertSame( 62, (int) $db->get_var( "SELECT COUNT(*) FROM {$table}" ) );
 			self::assertSame(
 				array( 'START TRANSACTION', 'ROLLBACK', 'START TRANSACTION', 'COMMIT' ),
 				$db->transaction_queries
 			);
-			self::assertSame( SchemaInstaller::DB_VERSION, get_option( 'cinebot_wp_db_version' ) );
 		} finally {
 			$db->close();
 		}

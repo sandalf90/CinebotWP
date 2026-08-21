@@ -268,6 +268,6 @@ final class SyncLogRepository {
 
 	/** Return a safe persistence failure without database or credential details. */
 	private function persistence_exception(): RuntimeException {
-		return new RuntimeException( esc_html__( 'Cinebot WP could not update synchronization history.', 'cinebot-wp' ) );
+		return new RuntimeException( esc_html__( 'Cinebot WP could not persist synchronization history.', 'cinebot-wp' ) );
 	}
 }

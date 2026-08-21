@@ -22,8 +22,7 @@ use CinebotWp\Frontend\ShortcodeHandler;
 use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
+
 use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
@@ -146,16 +145,12 @@ final class Plugin {
 		$titoli_page = new TitoliListPage(
 			$titoli_repo,
 			$evento_repo,
-			new SettoreRepository( $wpdb ),
-			new PrezzoRepository( $wpdb ),
 			$tipo_repo
 		);
 
 		$edit_page = new TitoloEditPage(
 			$titoli_repo,
 			$evento_repo,
-			new SettoreRepository( $wpdb ),
-			new PrezzoRepository( $wpdb ),
 			$tipo_repo,
 			$locale_repo
 		);
@@ -189,7 +184,8 @@ final class Plugin {
 		return new ShortcodeHandler(
 			new TitoloRepository( $wpdb ),
 			new TemplateRenderer(),
-			new EventoRepository( $wpdb )
+			new EventoRepository( $wpdb ),
+			new SettingsService()
 		);
 	}
 

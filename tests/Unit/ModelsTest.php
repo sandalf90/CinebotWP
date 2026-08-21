@@ -9,8 +9,6 @@ namespace CinebotWp\Tests\Unit;
 
 use CinebotWp\Models\Evento;
 use CinebotWp\Models\Locale;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\SyncLog;
 use CinebotWp\Models\TipologiaEvento;
 use CinebotWp\Models\Titolo;
@@ -48,6 +46,8 @@ final class ModelsTest extends TestCase {
 					'trailer'             => 'https://example.test/trailer',
 					'cast'                => 'Interprete',
 					'tag'                 => array( 'teatro', 'prosa' ),
+					'prezzo_da'           => '10.00',
+					'prezzo_a'            => '20.00',
 					'source'              => 'api',
 					'sync_hash'           => 'payload-hash',
 					'sync_active'         => true,
@@ -78,38 +78,7 @@ final class ModelsTest extends TestCase {
 					'updated_at'        => '2026-08-02 10:00:00',
 				),
 			),
-			'settore'           => array(
-				'class' => Settore::class,
-				'row'   => array(
-					'id'             => 11,
-					'idsettore'      => 601,
-					'evento_id'      => 10,
-					'nome'           => 'Platea',
-					'source'         => 'api',
-					'sync_active'    => false,
-					'last_seen_sync' => 'sync-token',
-					'created_at'     => '2026-08-01 10:00:00',
-					'updated_at'     => '2026-08-02 10:00:00',
-				),
-			),
-			'prezzo'            => array(
-				'class' => Prezzo::class,
-				'row'   => array(
-					'id'             => 12,
-					'idprezzo'       => 701,
-					'settore_id'     => 11,
-					'nome'           => 'Intero',
-					'tipo'           => 'I',
-					'importo'        => '19.90',
-					'prevendita'     => '0.10',
-					'stato'          => true,
-					'source'         => 'api',
-					'sync_active'    => true,
-					'last_seen_sync' => 'sync-token',
-					'created_at'     => '2026-08-01 10:00:00',
-					'updated_at'     => '2026-08-02 10:00:00',
-				),
-			),
+
 			'locale'            => array(
 				'class' => Locale::class,
 				'row'   => array(
@@ -209,16 +178,6 @@ final class ModelsTest extends TestCase {
 		self::assertSame( 'manual', $evento->source );
 		self::assertSame( 1, $evento->syncActive );
 		self::assertNull( $evento->lastSeenSync );
-
-		$prezzo = Prezzo::fromArray( array( 'settore_id' => 11 ) );
-		self::assertNull( $prezzo->importo );
-		self::assertNull( $prezzo->prevendita );
-		self::assertSame( 'manual', $prezzo->source );
-
-		$settore = Settore::fromArray( array( 'evento_id' => 10 ) );
-		self::assertSame( 'manual', $settore->source );
-		self::assertSame( 1, $settore->syncActive );
-
 		$locale = Locale::fromArray( array( 'nome' => 'Manuale' ) );
 		self::assertNull( $locale->localeIdRemoto );
 		self::assertSame( 'manual', $locale->source );
@@ -250,8 +209,8 @@ final class ModelsTest extends TestCase {
 			'locale_id'       => 3,
 			'locale_nome'     => 'Cinema Martinovich',
 			'comune'          => null,
-			'prezzo_min'      => null,
-			'prezzo_max'      => null,
+			'prezzo_da'      => null,
+			'prezzo_a'      => null,
 		);
 		$original = $row;
 
@@ -269,8 +228,8 @@ final class ModelsTest extends TestCase {
 		self::assertSame( 3, $card->localeId );
 		self::assertSame( 'Cinema Martinovich', $card->localeNome );
 		self::assertNull( $card->comune );
-		self::assertNull( $card->prezzoMin );
-		self::assertNull( $card->prezzoMax );
+		self::assertNull( $card->prezzoDa );
+		self::assertNull( $card->prezzoA );
 	}
 
 	/**

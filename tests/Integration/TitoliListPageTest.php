@@ -18,14 +18,10 @@ use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Models\Evento;
 use CinebotWp\Models\Locale;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\Titolo;
 use CinebotWp\Plugin;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\CronScheduler;
@@ -48,12 +44,6 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 
 	/** @var EventoRepository */
 	private $events;
-
-	/** @var SettoreRepository */
-	private $sectors;
-
-	/** @var PrezzoRepository */
-	private $prices;
 
 	/** @var TipologiaRepository */
 	private $types;
@@ -86,24 +76,30 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 
 		$this->titles  = new TitoloRepository( self::$db );
 		$this->events  = new EventoRepository( self::$db );
-		$this->sectors = new SettoreRepository( self::$db );
-		$this->prices  = new PrezzoRepository( self::$db );
 		$this->types   = new TipologiaRepository( self::$db );
 		$this->venues  = new LocaleRepository( self::$db );
 
 		$this->page = new TitoliListPage(
 			$this->titles,
 			$this->events,
-			$this->sectors,
-			$this->prices,
 			$this->types
 		);
+		add_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 	}
 
 	/** Clear hierarchy fixtures after each test. */
 	public function tear_down(): void {
+		remove_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 		$this->clear_tables();
+		$_POST    = array();
+		$_GET     = array();
+		$_REQUEST = array();
 		parent::tear_down();
+	}
+
+	/** Stop redirects before WordPress attempts to send test headers. */
+	public function intercept_redirect( $location ) {
+		throw new \WPDieException( is_string( $location ) ? $location : '' );
 	}
 
 	/** The declared columns match the brief. */
@@ -233,13 +229,11 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		$this->page->render();
 	}
 
-	/** A single delete with a valid nonce cascades through the hierarchy. */
+	/** A single delete with a valid nonce removes its events and title. */
 	public function test_single_delete_with_valid_nonce_cascades(): void {
 		$title_id = $this->titles->save( $this->title( null, 'Cascade', 'manual' ) );
 		$venue_id = $this->venue( 'Cascade Venue', 'Roma' );
-		$event_id = $this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
-		$sector_id = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		$price_id = $this->prices->save( $this->price( null, $sector_id, '5.00', 1, 'manual' ) );
+		$this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
 
 		$this->set_request(
 			array(
@@ -257,22 +251,15 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 
 		self::assertNull( $this->titles->find( $title_id ) );
 		self::assertCount( 0, $this->events->findByTitoloId( $title_id ) );
-		self::assertCount( 0, $this->sectors->findByEventoId( $event_id ) );
-		self::assertCount( 0, $this->prices->findBySettoreId( $sector_id ) );
-		self::assertFalse( $this->prices->delete( $price_id ) );
 	}
 
-	/** Bulk delete with a valid nonce cascades through all selected hierarchies. */
+	/** Bulk delete with a valid nonce removes selected titles and events. */
 	public function test_bulk_delete_cascades(): void {
 		$first_title  = $this->titles->save( $this->title( null, 'Bulk One', 'manual' ) );
 		$second_title = $this->titles->save( $this->title( null, 'Bulk Two', 'manual' ) );
 		$venue_id    = $this->venue( 'Bulk Venue', 'Roma' );
-		$first_event  = $this->events->save( $this->event( null, $first_title, $venue_id, 'manual' ) );
-		$second_event = $this->events->save( $this->event( null, $second_title, $venue_id, 'manual' ) );
-		$first_sector = $this->sectors->save( $this->sector( null, $first_event, 'manual' ) );
-		$second_sector = $this->sectors->save( $this->sector( null, $second_event, 'manual' ) );
-		$this->prices->save( $this->price( null, $first_sector, '5.00', 1, 'manual' ) );
-		$this->prices->save( $this->price( null, $second_sector, '6.00', 1, 'manual' ) );
+		$this->events->save( $this->event( null, $first_title, $venue_id, 'manual' ) );
+		$this->events->save( $this->event( null, $second_title, $venue_id, 'manual' ) );
 
 		$this->set_post_request(
 			array(
@@ -292,10 +279,6 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		self::assertNull( $this->titles->find( $second_title ) );
 		self::assertCount( 0, $this->events->findByTitoloId( $first_title ) );
 		self::assertCount( 0, $this->events->findByTitoloId( $second_title ) );
-		self::assertCount( 0, $this->sectors->findByEventoId( $first_event ) );
-		self::assertCount( 0, $this->sectors->findByEventoId( $second_event ) );
-		self::assertCount( 0, $this->prices->findBySettoreId( $first_sector ) );
-		self::assertCount( 0, $this->prices->findBySettoreId( $second_sector ) );
 	}
 
 	/** The rendered page exposes edit and new-title actions. */
@@ -321,8 +304,6 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		$edit_page   = new TitoloEditPage(
 			$this->titles,
 			$this->events,
-			$this->sectors,
-			$this->prices,
 			$this->types,
 			$this->venues
 		);
@@ -359,9 +340,9 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		self::assertInstanceOf( TitoliListPage::class, $property->getValue( $menu ) );
 	}
 
-	/** Clear hierarchy tables in child-first order. */
+	/** Clear title and event fixtures in child-first order. */
 	private function clear_tables(): void {
-		foreach ( array( 'prezzi', 'settori', 'eventi', 'titoli', 'locali' ) as $suffix ) {
+		foreach ( array( 'eventi', 'titoli', 'locali' ) as $suffix ) {
 			self::$db->query( 'DELETE FROM ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
 	}
@@ -414,32 +395,6 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 		$event->source       = $source;
 		$event->lastSeenSync = 'token';
 		return $event;
-	}
-
-	/** Create a sector fixture. */
-	private function sector( ?int $remote_id, int $event_id, string $source ): Settore {
-		$sector               = new Settore();
-		$sector->idsettore    = $remote_id;
-		$sector->eventoId     = $event_id;
-		$sector->nome         = 'Sector';
-		$sector->source       = $source;
-		$sector->lastSeenSync = 'token';
-		return $sector;
-	}
-
-	/** Create a price fixture. */
-	private function price( ?int $remote_id, int $sector_id, string $amount, int $state, string $source ): Prezzo {
-		$price               = new Prezzo();
-		$price->idprezzo    = $remote_id;
-		$price->settoreId   = $sector_id;
-		$price->nome        = 'Price';
-		$price->tipo        = 'INT';
-		$price->importo     = $amount;
-		$price->prevendita  = '1.00';
-		$price->stato        = $state;
-		$price->source      = $source;
-		$price->lastSeenSync = 'token';
-		return $price;
 	}
 
 	/** Persist and return a manual venue fixture. */

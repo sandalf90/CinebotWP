@@ -1,0 +1,3 @@
+﻿ Write-Output "# Review package: ${base}..${head}"; Write-Output ""; Write-Output "## Commits"; git log --oneline 
+"${base}..${head}"; Write-Output ""; Write-Output "## Files changed"; git diff --stat "${base}..${head}"; Write-Output 
+""; Write-Output "## Diff"; git diff -U10 "${base}..${head}" 

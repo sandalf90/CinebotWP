@@ -29,6 +29,8 @@ final class Titolo {
 	public ?string $cast = null;
 	/** @var array<int,mixed> */
 	public array $tag = array();
+	public ?string $prezzoDa = null;
+	public ?string $prezzoA = null;
 	public string $source = 'manual';
 	public ?string $syncHash = null;
 	public int $syncActive = 1;
@@ -60,6 +62,8 @@ final class Titolo {
 		$model->trailer            = isset( $data['trailer'] ) ? (string) $data['trailer'] : null;
 		$model->cast               = isset( $data['cast'] ) ? (string) $data['cast'] : null;
 		$model->tag                = isset( $data['tag'] ) && is_array( $data['tag'] ) ? $data['tag'] : array();
+		$model->prezzoDa           = isset( $data['prezzo_da'] ) ? (string) $data['prezzo_da'] : null;
+		$model->prezzoA            = isset( $data['prezzo_a'] ) ? (string) $data['prezzo_a'] : null;
 		$model->source             = isset( $data['source'] ) ? (string) $data['source'] : 'manual';
 		$model->syncHash           = isset( $data['sync_hash'] ) ? (string) $data['sync_hash'] : null;
 		$model->syncActive         = isset( $data['sync_active'] ) ? (int) $data['sync_active'] : 1;
@@ -94,6 +98,8 @@ final class Titolo {
 			'trailer'            => $this->trailer,
 			'cast'               => $this->cast,
 			'tag'                => $this->tag,
+			'prezzo_da'          => $this->prezzoDa,
+			'prezzo_a'           => $this->prezzoA,
 			'source'             => $this->source,
 			'sync_hash'          => $this->syncHash,
 			'sync_active'        => $this->syncActive,

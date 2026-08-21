@@ -1,6 +1,6 @@
 <?php
 /**
- * Nested title/event/sector/price editor admin page.
+ * Title and event editor admin page.
  *
  * @package CinebotWp
  */
@@ -8,20 +8,16 @@
 namespace CinebotWp\Admin\Pages;
 
 use CinebotWp\Models\Evento;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\Titolo;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use RuntimeException;
 use Throwable;
 
 /**
- * Renders the nested title editor and handles atomic hierarchy saves.
+ * Renders the title editor and handles atomic title/event saves.
  */
 final class TitoloEditPage {
 	/** @var TitoloRepository */
@@ -29,12 +25,6 @@ final class TitoloEditPage {
 
 	/** @var EventoRepository */
 	private $events;
-
-	/** @var SettoreRepository */
-	private $sectors;
-
-	/** @var PrezzoRepository */
-	private $prices;
 
 	/** @var TipologiaRepository */
 	private $types;
@@ -47,23 +37,17 @@ final class TitoloEditPage {
 	 *
 	 * @param TitoloRepository    $titles  Title persistence.
 	 * @param EventoRepository    $events  Event persistence.
-	 * @param SettoreRepository   $sectors Sector persistence.
-	 * @param PrezzoRepository    $prices  Price persistence.
 	 * @param TipologiaRepository $types   Event-type catalog.
 	 * @param LocaleRepository    $venues  Venue catalog.
 	 */
 	public function __construct(
 		TitoloRepository $titles,
 		EventoRepository $events,
-		SettoreRepository $sectors,
-		PrezzoRepository $prices,
 		TipologiaRepository $types,
 		LocaleRepository $venues
 	) {
 		$this->titles  = $titles;
 		$this->events  = $events;
-		$this->sectors = $sectors;
-		$this->prices  = $prices;
 		$this->types   = $types;
 		$this->venues  = $venues;
 	}
@@ -83,8 +67,8 @@ final class TitoloEditPage {
 			$id = (int) $id;
 		}
 
-		$title   = new Titolo();
-		$events  = array();
+		$title  = new Titolo();
+		$events = array();
 
 		if ( $id > 0 ) {
 			$loaded = $this->titles->find( $id );
@@ -93,22 +77,7 @@ final class TitoloEditPage {
 				return;
 			}
 			$title  = $loaded;
-			$loaded_events = $this->events->findByTitoloId( $id );
-			foreach ( $loaded_events as $event ) {
-				$loaded_sectors = $this->sectors->findByEventoId( (int) $event->id );
-				$sector_data    = array();
-				foreach ( $loaded_sectors as $sector ) {
-					$loaded_prices         = $this->prices->findBySettoreId( (int) $sector->id );
-					$sector_data[] = array(
-						'sector' => $sector,
-						'prices' => $loaded_prices,
-					);
-				}
-				$events[] = array(
-					'event'   => $event,
-					'sectors' => $sector_data,
-				);
-			}
+			$events = $this->events->findByTitoloId( $id );
 		}
 
 		$types   = $this->types->findAll( true );
@@ -128,8 +97,8 @@ final class TitoloEditPage {
 
 				<h2><?php esc_html_e( 'Events', 'cinebot-wp' ); ?></h2>
 				<div class="cinebot-events" id="cinebot-events" data-next-index="<?php echo esc_attr( (string) $max_eid ); ?>">
-					<?php foreach ( $events as $entry ) : ?>
-						<?php $this->render_event_fieldset( $entry['event'], $entry['sectors'], $venues ); ?>
+					<?php foreach ( $events as $event ) : ?>
+						<?php $this->render_event_fieldset( $event, $venues ); ?>
 					<?php endforeach; ?>
 				</div>
 				<p>
@@ -146,7 +115,7 @@ final class TitoloEditPage {
 		<?php
 	}
 
-	/** Save the submitted title and its nested hierarchy atomically. */
+	/** Save the submitted title and events atomically. */
 	public function save(): void {
 		if ( ! current_user_can( $this->capability() ) ) {
 			wp_die( esc_html__( 'Insufficient permissions.', 'cinebot-wp' ) );
@@ -176,7 +145,7 @@ final class TitoloEditPage {
 		try {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->query( 'START TRANSACTION' );
-			$saved_id = $this->persist_hierarchy( $title, $events_data, $title_id );
+			$saved_id = $this->persist_title_and_events( $title, $events_data, $title_id );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->query( 'COMMIT' );
 			$this->redirect_saved( $saved_id );
@@ -235,6 +204,14 @@ final class TitoloEditPage {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row"><label for="cinebot-prezzo-da"><?php esc_html_e( 'Prezzo da (€)', 'cinebot-wp' ); ?></label></th>
+					<td><input type="text" id="cinebot-prezzo-da" name="prezzo_da" value="<?php echo esc_attr( $title->prezzoDa ?? '' ); ?>" class="regular-text" /></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="cinebot-prezzo-a"><?php esc_html_e( 'Prezzo a (€)', 'cinebot-wp' ); ?></label></th>
+					<td><input type="text" id="cinebot-prezzo-a" name="prezzo_a" value="<?php echo esc_attr( $title->prezzoA ?? '' ); ?>" class="regular-text" /></td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="cinebot-descrizione"><?php esc_html_e( 'Descrizione', 'cinebot-wp' ); ?></label></th>
 					<td><textarea id="cinebot-descrizione" name="descrizione" rows="5" class="large-text"><?php echo esc_textarea( $title->descrizione ?? '' ); ?></textarea></td>
 				</tr>
@@ -276,10 +253,9 @@ final class TitoloEditPage {
 		<?php
 	}
 
-	/** Render a single event fieldset with its nested sectors and prices. */
-	private function render_event_fieldset( Evento $event, array $sectors, array $venues ): void {
+	/** Render a single event fieldset. */
+	private function render_event_fieldset( Evento $event, array $venues ): void {
 		$key      = (string) ( $event->id ?? 0 );
-		$max_sid  = $this->max_sector_key( $sectors );
 		$inizio_v = $this->datetime_local_value( $event->inizio );
 		?>
 		<fieldset class="cinebot-event-fieldset" data-event-key="<?php echo esc_attr( $key ); ?>">
@@ -337,76 +313,12 @@ final class TitoloEditPage {
 			</tr>
 			</table>
 
-			<h4><?php esc_html_e( 'Settori', 'cinebot-wp' ); ?></h4>
-			<div class="cinebot-sectors" data-event-key="<?php echo esc_attr( $key ); ?>" data-next-index="<?php echo esc_attr( (string) $max_sid ); ?>">
-				<?php foreach ( $sectors as $entry ) : ?>
-					<?php $this->render_sector_row( $entry['sector'], $entry['prices'], $key, $venues ); ?>
-				<?php endforeach; ?>
-			</div>
-			<p><button type="button" class="button cinebot-add-sector" data-event-key="<?php echo esc_attr( $key ); ?>"><?php esc_html_e( 'Add settore', 'cinebot-wp' ); ?></button></p>
 			<p><button type="button" class="button cinebot-remove-event"><?php esc_html_e( 'Remove event', 'cinebot-wp' ); ?></button></p>
 		</fieldset>
 		<?php
 	}
 
-	/** Render a single sector row with its nested prices. */
-	private function render_sector_row( Settore $sector, array $prices, string $event_key, array $venues ): void {
-		$key      = (string) ( $sector->id ?? 0 );
-		$max_pid  = $this->max_price_key( $prices );
-		?>
-		<div class="cinebot-sector-row" data-sector-key="<?php echo esc_attr( $key ); ?>">
-			<input type="hidden" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $key ); ?>][id]" value="<?php echo esc_attr( (string) ( $sector->id ?? 0 ) ); ?>" />
-			<label><?php esc_html_e( 'Nome settore', 'cinebot-wp' ); ?>:
-				<input type="text" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $key ); ?>][nome]" value="<?php echo esc_attr( $sector->nome ?? '' ); ?>" />
-			</label>
-
-			<table class="cinebot-prices-table" data-event-key="<?php echo esc_attr( $event_key ); ?>" data-sector-key="<?php echo esc_attr( $key ); ?>" data-next-index="<?php echo esc_attr( (string) $max_pid ); ?>">
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'Nome', 'cinebot-wp' ); ?></th>
-						<th><?php esc_html_e( 'Tipo', 'cinebot-wp' ); ?></th>
-						<th><?php esc_html_e( 'Importo', 'cinebot-wp' ); ?></th>
-						<th><?php esc_html_e( 'Prevendita', 'cinebot-wp' ); ?></th>
-						<th><?php esc_html_e( 'Stato', 'cinebot-wp' ); ?></th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $prices as $price ) : ?>
-						<?php $this->render_price_row( $price, $event_key, $key ); ?>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-			<p><button type="button" class="button cinebot-add-price" data-event-key="<?php echo esc_attr( $event_key ); ?>" data-sector-key="<?php echo esc_attr( $key ); ?>"><?php esc_html_e( 'Add prezzo', 'cinebot-wp' ); ?></button></p>
-			<p><button type="button" class="button cinebot-remove-sector"><?php esc_html_e( 'Remove settore', 'cinebot-wp' ); ?></button></p>
-		</div>
-		<?php
-	}
-
-	/** Render a single price row. */
-	private function render_price_row( Prezzo $price, string $event_key, string $sector_key ): void {
-		$key = (string) ( $price->id ?? 0 );
-		?>
-		<tr class="cinebot-price-row" data-price-key="<?php echo esc_attr( $key ); ?>">
-			<td>
-				<input type="hidden" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][id]" value="<?php echo esc_attr( (string) ( $price->id ?? 0 ) ); ?>" />
-				<input type="text" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][nome]" value="<?php echo esc_attr( $price->nome ?? '' ); ?>" />
-			</td>
-			<td>
-				<select name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][tipo]">
-					<option value="I" <?php selected( $price->tipo, 'I' ); ?>>I</option>
-					<option value="R" <?php selected( $price->tipo, 'R' ); ?>>R</option>
-				</select>
-			</td>
-			<td><input type="text" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][importo]" value="<?php echo esc_attr( $price->importo ?? '' ); ?>" size="8" /></td>
-			<td><input type="text" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][prevendita]" value="<?php echo esc_attr( $price->prevendita ?? '' ); ?>" size="8" /></td>
-			<td><input type="number" name="events[<?php echo esc_attr( $event_key ); ?>][sectors][<?php echo esc_attr( $sector_key ); ?>][prices][<?php echo esc_attr( $key ); ?>][stato]" value="<?php echo esc_attr( (string) ( $price->stato ?? '' ) ); ?>" size="4" /></td>
-			<td><button type="button" class="button cinebot-remove-price"><?php esc_html_e( 'Remove', 'cinebot-wp' ); ?></button></td>
-		</tr>
-		<?php
-	}
-
-	/** Render the three clone templates for events, sectors, and prices. */
+	/** Render the clone template for events. */
 	private function render_templates( array $types, array $venues ): void {
 		$type_options = '<option value="">' . esc_html__( '-- Select --', 'cinebot-wp' ) . '</option>';
 		foreach ( $types as $type ) {
@@ -460,54 +372,8 @@ final class TitoloEditPage {
 					<td><input type="url" name="events[__INDEX__][url_acquisto]" value="" class="regular-text" placeholder="<?php esc_attr_e( 'https://...', 'cinebot-wp' ); ?>" /></td>
 				</tr>
 				</table>
-				<h4><?php esc_html_e( 'Settori', 'cinebot-wp' ); ?></h4>
-				<div class="cinebot-sectors" data-event-key="__INDEX__" data-next-index="1"></div>
-				<p><button type="button" class="button cinebot-add-sector" data-event-key="__INDEX__"><?php esc_html_e( 'Add settore', 'cinebot-wp' ); ?></button></p>
 				<p><button type="button" class="button cinebot-remove-event"><?php esc_html_e( 'Remove event', 'cinebot-wp' ); ?></button></p>
 			</fieldset>
-		</template>
-
-		<template id="cinebot-sector-template">
-			<div class="cinebot-sector-row" data-sector-key="__INDEX__">
-				<input type="hidden" name="events[__EVENT_INDEX__][sectors][__INDEX__][id]" value="0" />
-				<label><?php esc_html_e( 'Nome settore', 'cinebot-wp' ); ?>:
-					<input type="text" name="events[__EVENT_INDEX__][sectors][__INDEX__][nome]" value="" />
-				</label>
-				<table class="cinebot-prices-table" data-event-key="__EVENT_INDEX__" data-sector-key="__INDEX__" data-next-index="1">
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Nome', 'cinebot-wp' ); ?></th>
-							<th><?php esc_html_e( 'Tipo', 'cinebot-wp' ); ?></th>
-							<th><?php esc_html_e( 'Importo', 'cinebot-wp' ); ?></th>
-							<th><?php esc_html_e( 'Prevendita', 'cinebot-wp' ); ?></th>
-							<th><?php esc_html_e( 'Stato', 'cinebot-wp' ); ?></th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-				<p><button type="button" class="button cinebot-add-price" data-event-key="__EVENT_INDEX__" data-sector-key="__INDEX__"><?php esc_html_e( 'Add prezzo', 'cinebot-wp' ); ?></button></p>
-				<p><button type="button" class="button cinebot-remove-sector"><?php esc_html_e( 'Remove settore', 'cinebot-wp' ); ?></button></p>
-			</div>
-		</template>
-
-		<template id="cinebot-price-template">
-			<tr class="cinebot-price-row" data-price-key="__INDEX__">
-				<td>
-					<input type="hidden" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][id]" value="0" />
-					<input type="text" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][nome]" value="" />
-				</td>
-				<td>
-					<select name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][tipo]">
-						<option value="I">I</option>
-						<option value="R">R</option>
-					</select>
-				</td>
-				<td><input type="text" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][importo]" value="" size="8" /></td>
-				<td><input type="text" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][prevendita]" value="" size="8" /></td>
-				<td><input type="number" name="events[__EVENT_INDEX__][sectors][__SECTOR_INDEX__][prices][__INDEX__][stato]" value="" size="4" /></td>
-				<td><button type="button" class="button cinebot-remove-price"><?php esc_html_e( 'Remove', 'cinebot-wp' ); ?></button></td>
-			</tr>
 		</template>
 		<?php
 	}
@@ -522,31 +388,36 @@ final class TitoloEditPage {
 	 * @throws RuntimeException When an existing title is not found.
 	 */
 	private function build_title( array $post, int $title_id ): Titolo {
-		if ( $title_id > 0 ) {
-			$stored = $this->titles->find( $title_id );
-			if ( null === $stored ) {
-				throw new RuntimeException( 'Title not found.' );
-			}
-			$title = $stored;
-		} else {
-			$title           = new Titolo();
-			$title->source   = 'manual';
-			$title->idtitolo = null;
-			$title->frontendId = null;
-		}
-
-		$title->titolo           = isset( $post['titolo'] ) ? sanitize_text_field( (string) $post['titolo'] ) : '';
-		$title->autore           = $this->nullable_text( $post['autore'] ?? '' );
-		$title->esecutore        = $this->nullable_text( $post['esecutore'] ?? '' );
-		$title->durata           = $this->nullable_int( $post['durata'] ?? '' );
-		$title->descrizione      = isset( $post['descrizione'] ) ? wp_kses_post( (string) $post['descrizione'] ) : null;
-		$title->tipoeventoCodice = $this->nullable_text( $post['tipoevento_codice'] ?? '' );
-		$title->locandinaUrl     = $this->nullable_url( $post['locandina_url'] ?? '' );
-		$title->cinetel          = $this->nullable_text( $post['cinetel'] ?? '' );
-		$title->tmdb             = $this->nullable_text( $post['tmdb'] ?? '' );
-		$title->trailer          = $this->nullable_url( $post['trailer'] ?? '' );
-		$title->cast             = $this->nullable_textarea( $post['cast'] ?? '' );
+		$title = new Titolo();
+		$title->titolo           = $this->require_text( $post, 'titolo', 'Titolo is required' );
+		$title->autore           = $this->nullable_text( $post['autore'] ?? null );
+		$title->esecutore        = $this->nullable_text( $post['esecutore'] ?? null );
+		$title->durata           = $this->nullable_int( $post['durata'] ?? null );
+		$title->tipoeventoCodice = $this->nullable_text( $post['tipoevento_codice'] ?? null );
+		$title->descrizione      = $this->nullable_html( $post['descrizione'] ?? null );
+		$title->locandinaUrl     = $this->nullable_url( $post['locandina_url'] ?? null );
+		$title->cinetel          = $this->nullable_text( $post['cinetel'] ?? null );
+		$title->tmdb             = $this->nullable_text( $post['tmdb'] ?? null );
+		$title->trailer          = $this->nullable_url( $post['trailer'] ?? null );
+		$title->cast             = $this->nullable_text( $post['cast'] ?? null );
+		$title->prezzoDa         = $this->nullable_decimal( $post['prezzo_da'] ?? null );
+		$title->prezzoA          = $this->nullable_decimal( $post['prezzo_a'] ?? null );
 		$title->tag              = $this->parse_tags( $post['tag'] ?? '' );
+
+		if ( $title_id > 0 ) {
+			$existing = $this->titles->find( $title_id );
+			if ( null === $existing ) {
+				throw new RuntimeException( 'Title not found' );
+			}
+			$title->id           = $existing->id;
+			$title->idtitolo     = $existing->idtitolo;
+			$title->frontendId   = $existing->frontendId;
+			$title->source       = $existing->source;
+			$title->syncActive   = $existing->syncActive;
+			$title->lastSeenSync = $existing->lastSeenSync;
+			$title->scadenza     = $existing->scadenza;
+			$title->locandinaFlag = $existing->locandinaFlag;
+		}
 
 		return $title;
 	}
@@ -555,7 +426,7 @@ final class TitoloEditPage {
 	 * Build the events data structure from POST.
 	 *
 	 * @param array<string,mixed> $post Sanitized POST.
-	 * @return array<int,array{event:Evento,sectors:array<int,array{sector:Settore,prices:array<int,Prezzo>}>}>
+	 * @return array<int,array{event:Evento,url_submitted:bool}>
 	 */
 	private function build_events( array $post ): array {
 		$raw = $post['events'] ?? array();
@@ -579,69 +450,14 @@ final class TitoloEditPage {
 			$event->organizzatoreCf = $this->nullable_text( $entry['organizzatore_cf'] ?? '' );
 			$event->stato = $this->nullable_int( $entry['stato'] ?? '' );
 			$event->otp = $this->nullable_int( $entry['otp'] ?? '' );
-		$event->controlloaccessi = $this->nullable_int( $entry['controlloaccessi'] ?? '' );
-		$event->mappa = $this->nullable_int( $entry['mappa'] ?? '' );
-		$event->urlAcquisto = $this->nullable_url( $entry['url_acquisto'] ?? '' );
+			$event->controlloaccessi = $this->nullable_int( $entry['controlloaccessi'] ?? '' );
+			$event->mappa = $this->nullable_int( $entry['mappa'] ?? '' );
+			$event->urlAcquisto = $this->nullable_url( $entry['url_acquisto'] ?? '' );
 
 			$result[] = array(
-				'event'   => $event,
-				'sectors' => $this->build_sectors( $entry['sectors'] ?? array() ),
+				'event'         => $event,
+				'url_submitted' => array_key_exists( 'url_acquisto', $entry ),
 			);
-		}
-		return $result;
-	}
-
-	/**
-	 * Build the sectors data structure from POST.
-	 *
-	 * @param array<string,mixed> $raw Raw sectors array.
-	 * @return array<int,array{sector:Settore,prices:array<int,Prezzo>}>
-	 */
-	private function build_sectors( array $raw ): array {
-		$result = array();
-		foreach ( $raw as $entry ) {
-			if ( ! is_array( $entry ) ) {
-				continue;
-			}
-
-			$sector_id = isset( $entry['id'] ) ? absint( $entry['id'] ) : 0;
-			$sector    = new Settore();
-			$sector->id = $sector_id > 0 ? $sector_id : null;
-			$sector->eventoId = 0;
-			$sector->nome = $this->nullable_text( $entry['nome'] ?? '' );
-
-			$result[] = array(
-				'sector' => $sector,
-				'prices' => $this->build_prices( $entry['prices'] ?? array() ),
-			);
-		}
-		return $result;
-	}
-
-	/**
-	 * Build the prices array from POST.
-	 *
-	 * @param array<string,mixed> $raw Raw prices array.
-	 * @return array<int,Prezzo>
-	 */
-	private function build_prices( array $raw ): array {
-		$result = array();
-		foreach ( $raw as $entry ) {
-			if ( ! is_array( $entry ) ) {
-				continue;
-			}
-
-			$price_id = isset( $entry['id'] ) ? absint( $entry['id'] ) : 0;
-			$price    = new Prezzo();
-			$price->id = $price_id > 0 ? $price_id : null;
-			$price->settoreId = 0;
-			$price->nome = $this->nullable_text( $entry['nome'] ?? '' );
-			$price->tipo = $this->nullable_price_tipo( $entry['tipo'] ?? '' );
-			$price->importo = $this->nullable_decimal( $entry['importo'] ?? '' );
-			$price->prevendita = $this->nullable_decimal( $entry['prevendita'] ?? '' );
-			$price->stato = $this->nullable_int( $entry['stato'] ?? '' );
-
-			$result[] = $price;
 		}
 		return $result;
 	}
@@ -670,21 +486,6 @@ final class TitoloEditPage {
 				$errors[] = sprintf( __( 'Event %d requires a venue.', 'cinebot-wp' ), $i + 1 );
 			}
 
-			foreach ( $entry['sectors'] as $j => $sector_data ) {
-				$sector = $sector_data['sector'];
-				if ( '' === trim( (string) $sector->nome ) ) {
-					$errors[] = sprintf( __( 'Event %d sector %d requires a name.', 'cinebot-wp' ), $i + 1, $j + 1 );
-				}
-
-				foreach ( $sector_data['prices'] as $k => $price ) {
-					if ( null !== $price->importo && (float) $price->importo < 0 ) {
-						$errors[] = sprintf( __( 'Event %d sector %d price %d has a negative amount.', 'cinebot-wp' ), $i + 1, $j + 1, $k + 1 );
-					}
-					if ( null !== $price->prevendita && (float) $price->prevendita < 0 ) {
-						$errors[] = sprintf( __( 'Event %d sector %d price %d has a negative pre-sale fee.', 'cinebot-wp' ), $i + 1, $j + 1, $k + 1 );
-					}
-				}
-			}
 		}
 
 		return $errors;
@@ -702,7 +503,7 @@ final class TitoloEditPage {
 	 * @throws RuntimeException When ownership checks fail.
 	 * @throws Throwable When repository persistence fails.
 	 */
-	private function persist_hierarchy( Titolo $title, array $events_data, int $original_title ): int {
+	private function persist_title_and_events( Titolo $title, array $events_data, int $original_title ): int {
 		$title_id = $this->titles->save( $title );
 
 		$existing_events = array();
@@ -715,116 +516,35 @@ final class TitoloEditPage {
 		$saved_event_ids = array();
 
 		foreach ( $events_data as $entry ) {
-			$event          = $entry['event'];
+			$event           = $entry['event'];
 			$event->titoloId = $title_id;
-			$event_id       = (int) ( $event->id ?? 0 );
+			$event_id        = (int) ( $event->id ?? 0 );
 
 			if ( $event_id > 0 ) {
 				if ( ! isset( $existing_events[ $event_id ] ) ) {
 					throw new RuntimeException( 'Event does not belong to this title.' );
 				}
-			$stored               = $existing_events[ $event_id ];
-			$event->source        = $stored->source;
-			$event->idevento      = $stored->idevento;
-			$event->syncActive    = $stored->syncActive;
-			$event->lastSeenSync  = $stored->lastSeenSync;
-		} else {
-			$event->source       = 'manual';
-			$event->idevento     = null;
-			$event->syncActive   = 1;
-			$event->lastSeenSync = null;
-		}
+				$stored               = $existing_events[ $event_id ];
+				$event->source        = $stored->source;
+				$event->idevento      = $stored->idevento;
+				$event->syncActive    = $stored->syncActive;
+				$event->lastSeenSync  = $stored->lastSeenSync;
+				if ( ! $entry['url_submitted'] ) {
+					$event->urlAcquisto = $stored->urlAcquisto;
+				}
+			} else {
+				$event->source       = 'manual';
+				$event->idevento     = null;
+				$event->syncActive   = 1;
+				$event->lastSeenSync = null;
+			}
 
 			$saved_event_id = $this->events->save( $event );
 			$saved_event_ids[] = $saved_event_id;
-
-			$existing_sectors = array();
-			if ( $event_id > 0 ) {
-				foreach ( $this->sectors->findByEventoId( $saved_event_id ) as $s ) {
-					$existing_sectors[ (int) $s->id ] = $s;
-				}
-			}
-
-			$saved_sector_ids = array();
-
-			foreach ( $entry['sectors'] as $sector_entry ) {
-				$sector           = $sector_entry['sector'];
-				$sector->eventoId = $saved_event_id;
-				$sector_id        = (int) ( $sector->id ?? 0 );
-
-				if ( $sector_id > 0 ) {
-					if ( ! isset( $existing_sectors[ $sector_id ] ) ) {
-						throw new RuntimeException( 'Sector does not belong to this event.' );
-					}
-					$stored               = $existing_sectors[ $sector_id ];
-					$sector->source       = $stored->source;
-					$sector->idsettore    = $stored->idsettore;
-					$sector->syncActive   = $stored->syncActive;
-					$sector->lastSeenSync = $stored->lastSeenSync;
-				} else {
-					$sector->source       = 'manual';
-					$sector->idsettore    = null;
-					$sector->syncActive   = 1;
-					$sector->lastSeenSync = null;
-				}
-
-				$saved_sector_id = $this->sectors->save( $sector );
-				$saved_sector_ids[] = $saved_sector_id;
-
-				$existing_prices = array();
-				if ( $sector_id > 0 ) {
-					foreach ( $this->prices->findBySettoreId( $saved_sector_id ) as $p ) {
-						$existing_prices[ (int) $p->id ] = $p;
-					}
-				}
-
-				$saved_price_ids = array();
-
-				foreach ( $sector_entry['prices'] as $price ) {
-					$price_id = (int) ( $price->id ?? 0 );
-
-					if ( $price_id > 0 ) {
-						if ( ! isset( $existing_prices[ $price_id ] ) ) {
-							throw new RuntimeException( 'Price does not belong to this sector.' );
-						}
-						$stored               = $existing_prices[ $price_id ];
-						$price->source        = $stored->source;
-						$price->idprezzo      = $stored->idprezzo;
-						$price->syncActive    = $stored->syncActive;
-						$price->lastSeenSync  = $stored->lastSeenSync;
-					} else {
-						$price->source       = 'manual';
-						$price->idprezzo     = null;
-						$price->syncActive   = 1;
-						$price->lastSeenSync = null;
-					}
-
-					$price->settoreId = $saved_sector_id;
-					$saved_price_ids[] = $this->prices->save( $price );
-				}
-
-				foreach ( $existing_prices as $ep_id => $ep ) {
-					if ( ! in_array( $ep_id, $saved_price_ids, true ) ) {
-						$this->prices->delete( $ep_id );
-					}
-				}
-			}
-
-			foreach ( $existing_sectors as $es_id => $es ) {
-				if ( ! in_array( $es_id, $saved_sector_ids, true ) ) {
-					$this->prices->deleteBySettoreId( $es_id );
-					$this->sectors->delete( $es_id );
-				}
-			}
 		}
 
 		foreach ( $existing_events as $ee_id => $ee ) {
 			if ( ! in_array( $ee_id, $saved_event_ids, true ) ) {
-				$orphan_sectors = $this->sectors->findByEventoId( $ee_id );
-				foreach ( $orphan_sectors as $os ) {
-					$this->prices->deleteBySettoreId( (int) $os->id );
-				}
-				$this->sectors->deleteByEventoId( $ee_id );
 				$this->events->delete( $ee_id );
 			}
 		}
@@ -833,6 +553,15 @@ final class TitoloEditPage {
 	}
 
 	// ----------------------------------------------------------------- helpers.
+
+	/** Return a required sanitized text field. */
+	private function require_text( array $data, string $key, string $message ): string {
+		$value = $this->nullable_text( $data[ $key ] ?? null );
+		if ( null === $value ) {
+			throw new RuntimeException( $message );
+		}
+		return $value;
+	}
 
 	/** Return a trimmed non-empty string or null. */
 	private function nullable_text( $value ): ?string {
@@ -843,12 +572,12 @@ final class TitoloEditPage {
 		return '' === $trimmed ? null : $trimmed;
 	}
 
-	/** Return a trimmed textarea string or null. */
-	private function nullable_textarea( $value ): ?string {
+	/** Return allowed post HTML or null. */
+	private function nullable_html( $value ): ?string {
 		if ( ! is_string( $value ) ) {
 			return null;
 		}
-		$trimmed = trim( sanitize_textarea_field( $value ) );
+		$trimmed = trim( wp_kses_post( $value ) );
 		return '' === $trimmed ? null : $trimmed;
 	}
 
@@ -870,15 +599,6 @@ final class TitoloEditPage {
 		}
 		$raw = esc_url_raw( trim( $value ) );
 		return '' === $raw ? null : $raw;
-	}
-
-	/** Return a validated price tipo (I or R) or null. */
-	private function nullable_price_tipo( $value ): ?string {
-		if ( ! is_string( $value ) ) {
-			return null;
-		}
-		$upper = strtoupper( trim( $value ) );
-		return in_array( $upper, array( 'I', 'R' ), true ) ? $upper : null;
 	}
 
 	/** Return a sanitized decimal string or null. */
@@ -926,32 +646,8 @@ final class TitoloEditPage {
 	/** Return the next event key (max existing ID + 1, or 1). */
 	private function max_event_key( array $events ): int {
 		$max = 0;
-		foreach ( $events as $entry ) {
-			$id = (int) ( $entry['event']->id ?? 0 );
-			if ( $id > $max ) {
-				$max = $id;
-			}
-		}
-		return $max + 1;
-	}
-
-	/** Return the next sector key (max existing ID + 1, or 1). */
-	private function max_sector_key( array $sectors ): int {
-		$max = 0;
-		foreach ( $sectors as $entry ) {
-			$id = (int) ( $entry['sector']->id ?? 0 );
-			if ( $id > $max ) {
-				$max = $id;
-			}
-		}
-		return $max + 1;
-	}
-
-	/** Return the next price key (max existing ID + 1, or 1). */
-	private function max_price_key( array $prices ): int {
-		$max = 0;
-		foreach ( $prices as $price ) {
-			$id = (int) ( $price->id ?? 0 );
+		foreach ( $events as $event ) {
+			$id = (int) ( $event->id ?? 0 );
 			if ( $id > $max ) {
 				$max = $id;
 			}

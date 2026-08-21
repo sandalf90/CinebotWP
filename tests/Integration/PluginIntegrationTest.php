@@ -51,7 +51,7 @@ final class PluginIntegrationTest extends WP_UnitTestCase {
 		$source = (string) file_get_contents( CINEBOT_WP_FILE );
 		self::assertStringContainsString( "register_activation_hook", $source );
 		self::assertStringContainsString( "register_deactivation_hook", $source );
-		self::assertStringContainsString( "[Plugin::class, 'activate']", $source );
-		self::assertStringContainsString( "[Plugin::class, 'deactivate']", $source );
+		self::assertStringContainsString( "array( Plugin::class, 'activate' )", $source );
+		self::assertStringContainsString( "array( Plugin::class, 'deactivate' )", $source );
 	}
 }

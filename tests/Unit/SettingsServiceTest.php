@@ -203,6 +203,7 @@ final class SettingsServiceTest extends TestCase {
 				'sync_frequency' => 'daily',
 				'sync_enabled'   => false,
 				'api_base_url'   => 'https://ws.cinebot.it',
+				'detail_slug'    => '',
 				'has_password'   => false,
 			),
 			$service->get()
@@ -390,7 +391,7 @@ final class SettingsServiceTest extends TestCase {
 		self::assertSame( 'correct horse battery staple', $service->password() );
 		self::assertSame( true, $view['has_password'] );
 		self::assertSame(
-			array( 'api_username', 'api_frontend', 'sync_frequency', 'sync_enabled', 'api_base_url', 'has_password' ),
+			array( 'api_username', 'api_frontend', 'sync_frequency', 'sync_enabled', 'api_base_url', 'detail_slug', 'has_password' ),
 			array_keys( $view )
 		);
 		self::assertArrayNotHasKey( 'api_password', $view );

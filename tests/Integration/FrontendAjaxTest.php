@@ -27,6 +27,9 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 		global $wpdb;
+		foreach ( array( 'eventi', 'titoli', 'locali' ) as $suffix ) {
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'cinebot_' . $suffix );
+		}
 		$this->titles = new TitoloRepository( $wpdb );
 		$this->handler = new ShortcodeHandler(
 			$this->titles,
@@ -39,6 +42,9 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 	/** Clean transients. */
 	public function tear_down(): void {
 		global $wpdb;
+		foreach ( array( 'eventi', 'titoli', 'locali' ) as $suffix ) {
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'cinebot_' . $suffix );
+		}
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -46,12 +52,17 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 				$wpdb->esc_like( '_transient_timeout_cinebot_prog_' ) . '%'
 			)
 		);
+		$_POST    = array();
+		$_GET     = array();
+		$_REQUEST = array();
 		parent::tear_down();
 	}
 
 	/** AJAX filter rejects missing nonce. */
 	public function test_rejects_missing_nonce(): void {
 		$_POST = array( 'action' => 'cinebot_wp_filter' );
+
+		$_REQUEST = $_POST;
 
 		ob_start();
 		$this->handler->ajaxFilter();
@@ -69,6 +80,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'nonce'  => 'invalid',
 		);
 
+		$_REQUEST = $_POST;
+
 		ob_start();
 		$this->handler->ajaxFilter();
 		$output = (string) ob_get_clean();
@@ -84,6 +97,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'action' => 'cinebot_wp_filter',
 			'nonce'  => wp_create_nonce( 'cinebot_frontend' ),
 		);
+
+		$_REQUEST = $_POST;
 
 		ob_start();
 		$this->handler->ajaxFilter();
@@ -106,6 +121,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'nonce'  => wp_create_nonce( 'cinebot_frontend' ),
 			'tipo'   => '45',
 		);
+
+		$_REQUEST = $_POST;
 
 		ob_start();
 		$this->handler->ajaxFilter();
@@ -130,6 +147,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'tipo'   => '53',
 		);
 
+		$_REQUEST = $_POST;
+
 		ob_start();
 		$this->handler->ajaxFilter();
 		$output = (string) ob_get_clean();
@@ -153,6 +172,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'offset' => '0',
 		);
 
+		$_REQUEST = $_POST;
+
 		ob_start();
 		$this->handler->ajaxFilter();
 		$output = (string) ob_get_clean();
@@ -172,6 +193,8 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 			'nonce'  => wp_create_nonce( 'cinebot_frontend' ),
 			'limit'  => '50',
 		);
+
+		$_REQUEST = $_POST;
 
 		ob_start();
 		$this->handler->ajaxFilter();

@@ -10,12 +10,13 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 /** @var array<ProgrammazioneCard> $cards */
 /** @var int $total */
 /** @var array $atts */
+/** @var string $detail_url */
 /** @var int $instance */
 /** @var int $current_page */
 /** @var int $total_pages */
 /** @var string $base_url */
 ?>
-<div class="cinebot-programmazione" data-instance="<?php echo esc_attr( (string) $instance ); ?>">
+<div class="cinebot-programmazione" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-detail-url="<?php echo esc_attr( $detail_url ); ?>">
 	<?php if ( $atts['show_filters'] ) : ?>
 		<form class="cinebot-filters" id="cinebot-filters-<?php echo esc_attr( (string) $instance ); ?>">
 			<label>
@@ -41,8 +42,9 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 			<?php foreach ( $cards as $card ) : ?>
 				<?php
 				$card_args = array(
-					'card'      => $card,
-					'show_desc' => $atts['show_desc'],
+					'card'       => $card,
+					'show_desc'  => $atts['show_desc'],
+					'detail_url' => $detail_url,
 				);
 				// phpcs:ignore WordPress.Security.EscapeOutput -- template output is escaped inside.
 				echo $this->render( 'titolo-card', $card_args );

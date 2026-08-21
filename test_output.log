@@ -1,0 +1,15 @@
+ Container cinebot-db-1 Running 
+ Container cinebot-db-1 Waiting 
+ Container cinebot-db-1 Healthy 
+ Container cinebot-php-run-0c80cd4d8ea9 Creating 
+ Container cinebot-php-run-0c80cd4d8ea9 Created 
+Installing...
+Running as single site... To run multisite, use -c tests/phpunit/multisite.xml
+Not running ajax tests. To execute these, use --group ajax.
+Not running ms-files tests. To execute these, use --group ms-files.
+Not running external-http tests. To execute these, use --group external-http.
+PHPUnit 9.6.35 by Sebastian Bergmann and contributors.
+
+EEE.EEEEEEEEEEEEEEEEEEEEEEE....................................  63 / 388 ( 16%)
+.....................F....E.................................... 126 / 388 ( 32%)
+.............E.EEE...EEE........EEEEE..FE{"success":false,"data":{"message":"Nonce verification failed."}}

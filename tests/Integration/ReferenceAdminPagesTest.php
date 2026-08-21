@@ -14,6 +14,7 @@ use CinebotWp\Admin\Pages\TipologiaEditPage;
 use CinebotWp\Models\Locale;
 use CinebotWp\Models\TipologiaEvento;
 use CinebotWp\Repositories\LocaleRepository;
+use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use WP_UnitTestCase;
@@ -31,6 +32,9 @@ final class ReferenceAdminPagesTest extends WP_UnitTestCase {
 	/** @var TitoloRepository */
 	private $titles;
 
+	/** @var EventoRepository */
+	private $events;
+
 	/** Set up repositories. */
 	public function set_up(): void {
 		parent::set_up();
@@ -38,13 +42,14 @@ final class ReferenceAdminPagesTest extends WP_UnitTestCase {
 		$this->venues = new LocaleRepository( $wpdb );
 		$this->types  = new TipologiaRepository( $wpdb );
 		$this->titles = new TitoloRepository( $wpdb );
+		$this->events = new EventoRepository( $wpdb );
 	}
 
 	/** Venue list page renders without errors. */
 	public function test_locali_list_renders(): void {
 		wp_set_current_user( 1 );
 
-		$page = new LocaliListPage( $this->venues, $this->titles );
+		$page = new LocaliListPage( $this->venues, $this->titles, $this->events );
 
 		ob_start();
 		$page->render();

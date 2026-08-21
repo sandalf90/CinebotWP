@@ -90,12 +90,16 @@ final class SyncLock {
 	private function delete_exact( string $stored ): bool {
 		// The table is trusted and both option values are prepared.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return 1 === $this->db->query(
+		$deleted = 1 === $this->db->query(
 			$this->db->prepare(
 				"DELETE FROM {$this->db->options} WHERE option_name = %s AND option_value = %s",
 				self::OPTION,
 				$stored
 			)
 		);
+		if ( $deleted ) {
+			wp_cache_delete( self::OPTION, 'options' );
+		}
+		return $deleted;
 	}
 }

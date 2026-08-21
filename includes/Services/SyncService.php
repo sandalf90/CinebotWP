@@ -8,13 +8,9 @@
 namespace CinebotWp\Services;
 
 use CinebotWp\Models\Evento;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\Titolo;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use InvalidArgumentException;
@@ -32,10 +28,6 @@ final class SyncService {
 	private $titles;
 	/** @var EventoRepository */
 	private $events;
-	/** @var SettoreRepository */
-	private $sectors;
-	/** @var PrezzoRepository */
-	private $prices;
 	/** @var LocaleRepository */
 	private $venues;
 	/** @var SyncLogRepository */
@@ -51,8 +43,6 @@ final class SyncService {
 		?ApiClient $api = null,
 		?TitoloRepository $titles = null,
 		?EventoRepository $events = null,
-		?SettoreRepository $sectors = null,
-		?PrezzoRepository $prices = null,
 		?LocaleRepository $venues = null,
 		?SyncLogRepository $logs = null,
 		?SyncLock $lock = null,
@@ -62,8 +52,6 @@ final class SyncService {
 		$this->api     = $api;
 		$this->titles  = $titles ?? new TitoloRepository( $db );
 		$this->events  = $events ?? new EventoRepository( $db );
-		$this->sectors = $sectors ?? new SettoreRepository( $db );
-		$this->prices  = $prices ?? new PrezzoRepository( $db );
 		$this->venues  = $venues ?? new LocaleRepository( $db );
 		$this->logs    = $logs ?? new SyncLogRepository( $db );
 		$this->lock    = $lock ?? new SyncLock( $db );
@@ -153,9 +141,7 @@ final class SyncService {
 			$this->sync_title( $data, $envelope, $frontend, $token, $stats );
 		}
 		$gone_titles = $this->titles->deactivateUnseenApi( $frontend, $token );
-		$gone_events = $this->events->deactivateByTitoloIds( $gone_titles );
-		$gone_sectors = $this->sectors->deactivateByEventoIds( $gone_events );
-		$this->prices->deactivateBySettoreIds( $gone_sectors );
+		$this->events->deactivateByTitoloIds( $gone_titles );
 	}
 
 	/** Persist one API title and its entire descendant hierarchy. */
@@ -169,7 +155,28 @@ final class SyncService {
 		$path = $this->required_string( $envelope, 'path' );
 		$title = null !== $existing ? clone $existing : new Titolo();
 		$this->map_title( $title, $data, $host, $path, $frontend, $token );
-		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive;
+
+		$prezzo_min = null;
+		$prezzo_max = null;
+		foreach ( $this->child_array( $data, 'eventi' ) as $event_data ) {
+			foreach ( $this->child_array( $event_data, 'settori' ) as $sector_data ) {
+				foreach ( $this->child_array( $sector_data, 'prezzi' ) as $price_data ) {
+					if ( isset( $price_data['stato'] ) && 1 === (int) $price_data['stato'] && isset( $price_data['importo'] ) ) {
+						$importo = (float) $price_data['importo'];
+						if ( null === $prezzo_min || $importo < $prezzo_min ) {
+							$prezzo_min = $importo;
+						}
+						if ( null === $prezzo_max || $importo > $prezzo_max ) {
+							$prezzo_max = $importo;
+						}
+					}
+				}
+			}
+		}
+		$title->prezzoDa = null !== $prezzo_min ? number_format( $prezzo_min, 2, '.', '' ) : null;
+		$title->prezzoA  = null !== $prezzo_max ? number_format( $prezzo_max, 2, '.', '' ) : null;
+
+		$changed = null === $existing || ! hash_equals( (string) $existing->syncHash, (string) $title->syncHash ) || 1 !== $existing->syncActive || $existing->prezzoDa !== $title->prezzoDa || $existing->prezzoA !== $title->prezzoA;
 		$title_id = $this->titles->save( $title );
 		if ( null === $existing ) {
 			++$stats['titoli_added'];
@@ -182,9 +189,7 @@ final class SyncService {
 			}
 			$this->sync_event( $event_data, $title_id, $host, $path, $token, $stats );
 		}
-		$gone_events = $this->events->deactivateUnseenApi( $title_id, $token );
-		$gone_sectors = $this->sectors->deactivateByEventoIds( $gone_events );
-		$this->prices->deactivateBySettoreIds( $gone_sectors );
+		$this->events->deactivateUnseenApi( $title_id, $token );
 	}
 
 	/** Persist one event, its venue, sectors, and prices. */
@@ -216,59 +221,6 @@ final class SyncService {
 		} elseif ( $changed ) {
 			++$stats['eventi_updated'];
 		}
-		foreach ( $this->child_array( $data, 'settori' ) as $sector_data ) {
-			if ( ! is_array( $sector_data ) ) {
-				throw new InvalidArgumentException( 'Invalid sector data.' );
-			}
-			$this->sync_sector( $sector_data, $event_id, $token );
-		}
-		$gone_sectors = $this->sectors->deactivateUnseenApi( $event_id, $token );
-		$this->prices->deactivateBySettoreIds( $gone_sectors );
-	}
-
-	/** Persist one sector and reconcile its prices. */
-	private function sync_sector( array $data, int $event_id, string $token ): void {
-		$remote = $this->positive_int( $data['idsettore'] ?? null, 'sector' );
-		$existing = $this->sectors->findByRemoteId( $event_id, $remote );
-		if ( null !== $existing && 'manual' === $existing->source ) {
-			return;
-		}
-		$sector = null !== $existing ? $existing : new Settore();
-		$sector->idsettore = $remote;
-		$sector->eventoId = $event_id;
-		$sector->nome = $this->nullable_string( $data, 'settore' );
-		$sector->source = 'api';
-		$sector->syncActive = 1;
-		$sector->lastSeenSync = $token;
-		$sector_id = $this->sectors->save( $sector );
-		foreach ( $this->child_array( $data, 'prezzi' ) as $price_data ) {
-			if ( ! is_array( $price_data ) ) {
-				throw new InvalidArgumentException( 'Invalid price data.' );
-			}
-			$this->sync_price( $price_data, $sector_id, $token );
-		}
-		$this->prices->deactivateUnseenApi( $sector_id, $token );
-	}
-
-	/** Persist one API price. */
-	private function sync_price( array $data, int $sector_id, string $token ): void {
-		$remote = $this->positive_int( $data['idprezzo'] ?? null, 'price' );
-		$existing = $this->prices->findByRemoteId( $sector_id, $remote );
-		if ( null !== $existing && 'manual' === $existing->source ) {
-			return;
-		}
-		$price = null !== $existing ? $existing : new Prezzo();
-		$price->idprezzo = $remote;
-		$price->settoreId = $sector_id;
-		$price->nome = $this->nullable_string( $data, 'prezzo' );
-		$price->tipo = $this->nullable_string( $data, 'tipo' );
-		$price->importo = $this->nullable_string( $data, 'importo' );
-		$price->prevendita = $this->nullable_string( $data, 'prevendita' );
-		$price->stato = $this->nullable_int( $data, 'stato' );
-		$price->source = 'api';
-		$price->syncActive = 1;
-		$price->lastSeenSync = $token;
-		$this->prices->save( $price );
 	}
 
 	/** Map all title DTO fields from its API representation. */
@@ -421,10 +373,15 @@ final class SyncService {
 	/** Delete matching normal and timeout public cache options after a committed sync. */
 	private function clear_cache(): void {
 		// The table is trusted and the two wildcard patterns are prepared.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$option_names = $this->db->get_col( $this->db->prepare( "SELECT option_name FROM {$this->db->options} WHERE option_name LIKE %s OR option_name LIKE %s", '_transient_cinebot_prog_%', '_transient_timeout_cinebot_prog_%' ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$result = $this->db->query( $this->db->prepare( "DELETE FROM {$this->db->options} WHERE option_name LIKE %s OR option_name LIKE %s", '_transient_cinebot_prog_%', '_transient_timeout_cinebot_prog_%' ) );
 		if ( false === $result ) {
 			throw new RuntimeException( 'Unable to clear schedule cache.' );
+		}
+		foreach ( $option_names as $option_name ) {
+			wp_cache_delete( (string) $option_name, 'options' );
 		}
 	}
 

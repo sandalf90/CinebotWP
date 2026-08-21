@@ -18,14 +18,10 @@ use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Models\Evento;
 use CinebotWp\Models\Locale;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\Titolo;
 use CinebotWp\Plugin;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\SettingsService;
@@ -47,12 +43,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 
 	/** @var EventoRepository */
 	private $events;
-
-	/** @var SettoreRepository */
-	private $sectors;
-
-	/** @var PrezzoRepository */
-	private $prices;
 
 	/** @var TipologiaRepository */
 	private $types;
@@ -88,16 +78,12 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 
 		$this->titles  = new TitoloRepository( self::$db );
 		$this->events  = new EventoRepository( self::$db );
-		$this->sectors = new SettoreRepository( self::$db );
-		$this->prices  = new PrezzoRepository( self::$db );
 		$this->types   = new TipologiaRepository( self::$db );
 		$this->venues  = new LocaleRepository( self::$db );
 
 		$this->page = new TitoloEditPage(
 			$this->titles,
 			$this->events,
-			$this->sectors,
-			$this->prices,
 			$this->types,
 			$this->venues
 		);
@@ -105,8 +91,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		$this->list_page = new TitoliListPage(
 			$this->titles,
 			$this->events,
-			$this->sectors,
-			$this->prices,
 			$this->types
 		);
 
@@ -150,6 +134,8 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'name="esecutore"', $output );
 		self::assertStringContainsString( 'name="durata"', $output );
 		self::assertStringContainsString( 'name="tipoevento_codice"', $output );
+		self::assertStringContainsString( 'name="prezzo_da"', $output );
+		self::assertStringContainsString( 'name="prezzo_a"', $output );
 		self::assertStringContainsString( 'name="descrizione"', $output );
 		self::assertStringContainsString( 'name="locandina_url"', $output );
 		self::assertStringContainsString( 'name="cinetel"', $output );
@@ -161,17 +147,16 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( '__INDEX__', $output );
 	}
 
-	/** The edit form loads and displays the full hierarchy. */
-	public function test_edit_form_renders_loaded_hierarchy(): void {
+	/** The edit form loads title prices and events. */
+	public function test_edit_form_renders_loaded_title_and_events(): void {
 		$title_id  = $this->seed_full_hierarchy();
 		$output    = $this->capture_render( $title_id );
 
 		self::assertStringContainsString( 'value="Edited Title"', $output );
 		self::assertStringContainsString( 'value="Author"', $output );
 		self::assertStringContainsString( 'value="2024-03-15T20:00"', $output );
-		self::assertStringContainsString( 'value="Platea"', $output );
-		self::assertStringContainsString( 'value="Intero"', $output );
-		self::assertStringContainsString( 'value="10.50"', $output );
+		self::assertStringContainsString( 'name="prezzo_da" value="10.50"', $output );
+		self::assertStringContainsString( 'name="prezzo_a" value="15.00"', $output );
 	}
 
 	/** A new title save creates a row with source=manual and null remote ID. */
@@ -187,6 +172,8 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		self::assertNull( $saved->idtitolo );
 		self::assertNull( $saved->frontendId );
 		self::assertSame( 'New Title', $saved->titolo );
+		self::assertSame( '10.50', $saved->prezzoDa );
+		self::assertSame( '15.00', $saved->prezzoA );
 	}
 
 	/** Editing an existing API title keeps source=api and the remote ID. */
@@ -261,50 +248,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		$this->assert_redirected();
 
 		self::assertCount( 0, $this->events->findByTitoloId( $title_id ) );
-	}
-
-	/** Removed sectors are deleted only for the correct event. */
-	public function test_removed_sectors_deleted_under_correct_event(): void {
-		$title_id = $this->titles->save( $this->title( null, 'Parent', 'manual' ) );
-		$venue    = $this->venue();
-
-		$event_a  = $this->events->save( $this->event( null, $title_id, $venue, 'manual' ) );
-		$event_b  = $this->events->save( $this->event( null, $title_id, $venue, 'manual' ) );
-
-		$sector_a1 = $this->sectors->save( $this->sector( null, $event_a, 'manual' ) );
-		$sector_b1 = $this->sectors->save( $this->sector( null, $event_b, 'manual' ) );
-
-		$this->prices->save( $this->price( null, $sector_a1, '5.00', 1, 'manual' ) );
-		$this->prices->save( $this->price( null, $sector_b1, '6.00', 1, 'manual' ) );
-
-		$this->submit_edit_removing_sector_a1( $title_id, $event_a, $event_b, $sector_b1, $venue );
-
-		$this->assert_redirected();
-
-		$remaining_a = $this->sectors->findByEventoId( $event_a );
-		$remaining_b = $this->sectors->findByEventoId( $event_b );
-		self::assertCount( 0, $remaining_a );
-		self::assertCount( 1, $remaining_b, 'Sector under event B must survive.' );
-	}
-
-	/** Removed prices are deleted only for the correct sector. */
-	public function test_removed_prices_deleted_under_correct_sector(): void {
-		$title_id = $this->titles->save( $this->title( null, 'Parent', 'manual' ) );
-		$venue    = $this->venue();
-		$event_id = $this->events->save( $this->event( null, $title_id, $venue, 'manual' ) );
-
-		$sector_a = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		$sector_b = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-
-		$price_a1 = $this->prices->save( $this->price( null, $sector_a, '5.00', 1, 'manual' ) );
-		$price_b1 = $this->prices->save( $this->price( null, $sector_b, '6.00', 1, 'manual' ) );
-
-		$this->submit_edit_removing_price_a1( $title_id, $event_id, $venue, $sector_a, $sector_b, $price_b1 );
-
-		$this->assert_redirected();
-
-		self::assertCount( 0, $this->prices->findBySettoreId( $sector_a ) );
-		self::assertCount( 1, $this->prices->findBySettoreId( $sector_b ), 'Price under sector B must survive.' );
 	}
 
 	/** The descrizione field is sanitized with wp_kses_post. */
@@ -459,99 +402,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		);
 	}
 
-	/** New sector rows get source=manual and null idsettore. */
-	public function test_new_sector_gets_source_manual(): void {
-		$venue = $this->venue();
-
-		$this->set_post_request(
-			array(
-				'cinebot_wp_titolo_nonce' => wp_create_nonce( 'cinebot_wp_save_titolo' ),
-				'action'                  => 'cinebot_wp_save_titolo',
-				'titolo_id'               => '0',
-				'titolo'                  => 'Sector Source Test',
-				'events'                  => array(
-					'new1' => array(
-						'id'        => '0',
-						'inizio'    => '2024-05-01 20:00',
-						'locale_id' => (string) $venue,
-						'sectors'   => array(
-							'new1' => array(
-								'id'     => '0',
-								'nome'   => 'New Sector',
-								'prices' => array(),
-							),
-						),
-					),
-				),
-			)
-		);
-
-		try {
-			$this->page->save();
-		} catch ( \WPDieException $e ) {
-			// Redirect intercepted.
-		}
-
-		$all     = $this->titles->search( array(), 1, 50 );
-		$events  = $this->events->findByTitoloId( (int) $all[0]->id );
-		$sectors = $this->sectors->findByEventoId( (int) $events[0]->id );
-		self::assertCount( 1, $sectors );
-		self::assertSame( 'manual', $sectors[0]->source );
-		self::assertNull( $sectors[0]->idsettore );
-	}
-
-	/** New price rows get source=manual and null idprezzo. */
-	public function test_new_price_gets_source_manual(): void {
-		$venue = $this->venue();
-
-		$this->set_post_request(
-			array(
-				'cinebot_wp_titolo_nonce' => wp_create_nonce( 'cinebot_wp_save_titolo' ),
-				'action'                  => 'cinebot_wp_save_titolo',
-				'titolo_id'               => '0',
-				'titolo'                  => 'Price Source Test',
-				'events'                  => array(
-					'new1' => array(
-						'id'        => '0',
-						'inizio'    => '2024-05-01 20:00',
-						'locale_id' => (string) $venue,
-						'sectors'   => array(
-							'new1' => array(
-								'id'     => '0',
-								'nome'   => 'Sector',
-								'prices' => array(
-									'new1' => array(
-										'id'        => '0',
-										'nome'      => 'Intero',
-										'tipo'      => 'I',
-										'importo'   => '12.00',
-										'prevendita'=> '1.00',
-										'stato'     => '1',
-									),
-								),
-							),
-						),
-					),
-				),
-			)
-		);
-
-		try {
-			$this->page->save();
-		} catch ( \WPDieException $e ) {
-			// Redirect intercepted.
-		}
-
-		$all     = $this->titles->search( array(), 1, 50 );
-		$events  = $this->events->findByTitoloId( (int) $all[0]->id );
-		$sectors = $this->sectors->findByEventoId( (int) $events[0]->id );
-		$prices  = $this->prices->findBySettoreId( (int) $sectors[0]->id );
-		self::assertCount( 1, $prices );
-		self::assertSame( 'manual', $prices[0]->source );
-		self::assertNull( $prices[0]->idprezzo );
-		self::assertSame( '12.00', $prices[0]->importo );
-	}
-
 	/** Non-admin users are denied save. */
 	public function test_save_denies_non_admin(): void {
 		wp_set_current_user( 0 );
@@ -633,9 +483,9 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 
 	// ------------------------------------------------------------------ helpers.
 
-	/** Clear hierarchy tables in child-first order. */
+	/** Clear title and event fixtures in child-first order. */
 	private function clear_tables(): void {
-		foreach ( array( 'prezzi', 'settori', 'eventi', 'titoli', 'locali' ) as $suffix ) {
+		foreach ( array( 'eventi', 'titoli', 'locali' ) as $suffix ) {
 			self::$db->query( 'DELETE FROM ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
 	}
@@ -700,32 +550,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		return $event;
 	}
 
-	/** Create a sector fixture. */
-	private function sector( ?int $remote_id, int $event_id, string $source ): Settore {
-		$sector               = new Settore();
-		$sector->idsettore    = $remote_id;
-		$sector->eventoId     = $event_id;
-		$sector->nome         = 'Platea';
-		$sector->source       = $source;
-		$sector->lastSeenSync = 'token';
-		return $sector;
-	}
-
-	/** Create a price fixture. */
-	private function price( ?int $remote_id, int $sector_id, string $amount, int $state, string $source ): Prezzo {
-		$price               = new Prezzo();
-		$price->idprezzo    = $remote_id;
-		$price->settoreId   = $sector_id;
-		$price->nome        = 'Intero';
-		$price->tipo        = 'I';
-		$price->importo     = $amount;
-		$price->prevendita  = '1.00';
-		$price->stato        = $state;
-		$price->source      = $source;
-		$price->lastSeenSync = 'token';
-		return $price;
-	}
-
 	/** Persist and return a manual venue fixture. */
 	private function venue(): int {
 		$venue         = new Locale();
@@ -735,25 +559,19 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		return $this->venues->save( $venue );
 	}
 
-	/** Seed a full hierarchy and return the title ID. */
+	/** Seed a title and event and return the title ID. */
 	private function seed_full_hierarchy(): int {
 		$title_id = $this->titles->save( $this->title( null, 'Edited Title', 'manual' ) );
 		$title    = $this->titles->find( $title_id );
 		$title->autore = 'Author';
+		$title->prezzoDa = '10.50';
+		$title->prezzoA = '15.00';
 		$this->titles->save( $title );
 
 		$venue_id = $this->venue();
 		$event    = $this->event( null, $title_id, $venue_id, 'manual' );
 		$event->inizio = '2024-03-15 20:00:00';
-		$event_id = $this->events->save( $event );
-
-		$sector = $this->sector( null, $event_id, 'manual' );
-		$sector->nome = 'Platea';
-		$sector_id = $this->sectors->save( $sector );
-
-		$price = $this->price( null, $sector_id, '10.50', 1, 'manual' );
-		$price->nome = 'Intero';
-		$this->prices->save( $price );
+		$this->events->save( $event );
 
 		return $title_id;
 	}
@@ -767,6 +585,8 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 				'titolo_id'               => '0',
 				'titolo'                  => 'New Title',
 				'autore'                  => 'New Author',
+				'prezzo_da'               => '10.50',
+				'prezzo_a'                => '15.00',
 			)
 		);
 	}
@@ -792,78 +612,6 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 				'titolo_id'               => (string) $title_id,
 				'titolo'                  => 'Updated',
 				'events'                  => array(),
-			)
-		);
-	}
-
-	/** Submit an edit removing sector_a1 from event_a. */
-	private function submit_edit_removing_sector_a1( int $title_id, int $event_a, int $event_b, int $sector_b1, int $venue ): void {
-		$this->set_post_request(
-			array(
-				'cinebot_wp_titolo_nonce' => wp_create_nonce( 'cinebot_wp_save_titolo' ),
-				'action'                  => 'cinebot_wp_save_titolo',
-				'titolo_id'               => (string) $title_id,
-				'titolo'                  => 'Updated',
-				'events'                  => array(
-					(string) $event_a => array(
-						'id'        => (string) $event_a,
-						'inizio'    => '2024-06-01 20:00',
-						'locale_id' => (string) $venue,
-						'sectors'   => array(),
-					),
-					(string) $event_b => array(
-						'id'        => (string) $event_b,
-						'inizio'    => '2024-06-02 20:00',
-						'locale_id' => (string) $venue,
-						'sectors'   => array(
-							(string) $sector_b1 => array(
-								'id'     => (string) $sector_b1,
-								'nome'   => 'Sector B1',
-								'prices' => array(),
-							),
-						),
-					),
-				),
-			)
-		);
-	}
-
-	/** Submit an edit removing price_a1 from sector_a. */
-	private function submit_edit_removing_price_a1( int $title_id, int $event_id, int $venue, int $sector_a, int $sector_b, int $price_b1 ): void {
-		$this->set_post_request(
-			array(
-				'cinebot_wp_titolo_nonce' => wp_create_nonce( 'cinebot_wp_save_titolo' ),
-				'action'                  => 'cinebot_wp_save_titolo',
-				'titolo_id'               => (string) $title_id,
-				'titolo'                  => 'Updated',
-				'events'                  => array(
-					(string) $event_id => array(
-						'id'        => (string) $event_id,
-						'inizio'    => '2024-06-01 20:00',
-						'locale_id' => (string) $venue,
-						'sectors'   => array(
-							(string) $sector_a => array(
-								'id'     => (string) $sector_a,
-								'nome'   => 'Sector A',
-								'prices' => array(),
-							),
-							(string) $sector_b => array(
-								'id'     => (string) $sector_b,
-								'nome'   => 'Sector B',
-								'prices' => array(
-									(string) $price_b1 => array(
-										'id'        => (string) $price_b1,
-										'nome'      => 'Price B1',
-										'tipo'      => 'I',
-										'importo'   => '6.00',
-										'prevendita'=> '1.00',
-										'stato'     => '1',
-									),
-								),
-							),
-						),
-					),
-				),
 			)
 		);
 	}

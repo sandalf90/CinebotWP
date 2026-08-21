@@ -162,6 +162,8 @@ final class TipologiaRepositoryTest extends WP_UnitTestCase {
 		$type->codice      = '01';
 		$type->descrizione = 'Duplicate';
 
+		global $wpdb;
+		$wpdb->suppress_errors( true );
 		try {
 			$this->repository->save( $type );
 			self::fail( 'A duplicate event-type code should fail.' );
@@ -169,6 +171,7 @@ final class TipologiaRepositoryTest extends WP_UnitTestCase {
 			self::assertStringContainsString( 'event type', strtolower( $exception->getMessage() ) );
 			self::assertDoesNotMatchRegularExpression( '/\b(?:insert|update|select|delete)\b/i', $exception->getMessage() );
 		}
+		$wpdb->suppress_errors( false );
 	}
 
 	/**

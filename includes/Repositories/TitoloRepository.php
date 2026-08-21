@@ -8,7 +8,9 @@
 namespace CinebotWp\Repositories;
 
 use CinebotWp\Models\Titolo;
+use CinebotWp\ReadModels\EventoRiga;
 use CinebotWp\ReadModels\ProgrammazioneCard;
+use CinebotWp\ReadModels\TitoloDetail;
 use InvalidArgumentException;
 use RuntimeException;
 use wpdb;
@@ -50,6 +52,61 @@ final class TitoloRepository {
 	}
 
 	/**
+	 * Load the aggregated detail projection for a title.
+	 *
+	 * Joins visible events with their venue names and per-event price ranges,
+	 * then computes title-level aggregates (overall price min/max, distinct
+	 * days, first/last day, distinct venue names).
+	 *
+	 * @return TitoloDetail|null Null when the title does not exist.
+	 */
+	public function findDetail( int $titleId ): ?TitoloDetail {
+		$title = $this->find( $titleId );
+		if ( null === $title ) {
+			return null;
+		}
+
+		$base   = $this->db->prefix . 'cinebot_';
+		$sql    = "SELECT e.id evento_id, e.inizio, e.url_acquisto, l.nome locale_nome, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a FROM {$base}eventi e INNER JOIN {$base}locali l ON l.id = e.locale_id INNER JOIN {$base}titoli t ON t.id = e.titolo_id WHERE e.titolo_id = %d AND e.sync_active = %d AND e.stato = %d ORDER BY e.inizio ASC, e.id ASC";
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $this->db->get_results( $this->db->prepare( $sql, array( $titleId, 1, 3 ) ), ARRAY_A );
+
+		$detail           = new TitoloDetail();
+		$detail->title    = $title;
+		$detail->eventi   = array_map(
+			static function ( array $row ): EventoRiga {
+				return EventoRiga::fromRow( $row );
+			},
+			is_array( $rows ) ? $rows : array()
+		);
+		$detail->eventiCount = count( $detail->eventi );
+
+		$days       = array();
+		$locali     = array();
+
+		foreach ( $detail->eventi as $riga ) {
+			$day = substr( $riga->inizio, 0, 10 );
+			if ( '' !== $day && ! in_array( $day, $days, true ) ) {
+				$days[] = $day;
+			}
+			if ( '' !== $riga->localeNome && ! in_array( $riga->localeNome, $locali, true ) ) {
+				$locali[] = $riga->localeNome;
+			}
+		}
+
+		sort( $days );
+		$detail->prezzoDa     = $title->prezzoDa;
+		$detail->prezzoA      = $title->prezzoA;
+		$detail->giorniCount  = count( $days );
+		$detail->primoGiorno  = $days ? $days[0] : null;
+		$detail->ultimoGiorno = $days ? $days[ count( $days ) - 1 ] : null;
+		$detail->localeNomi   = $locali ? implode( ', ', $locali ) : null;
+
+		return $detail;
+	}
+
+	/**
 	 * Insert or update a title.
 	 *
 	 * @throws InvalidArgumentException When source is invalid.
@@ -82,13 +139,15 @@ final class TitoloRepository {
 			'trailer' => $title->trailer,
 			'cast' => $title->cast,
 			'tag' => $tag,
+			'prezzo_da' => $title->prezzoDa,
+			'prezzo_a' => $title->prezzoA,
 			'source' => $title->source,
 			'sync_hash' => $title->syncHash,
 			'sync_active' => $manual ? 1 : $title->syncActive,
 			'last_seen_sync' => $manual ? null : $title->lastSeenSync,
 			'updated_at' => $now,
 		);
-		$formats = array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
+		$formats = array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		if ( null === $title->id ) {
 			$data['created_at'] = $now;
@@ -312,8 +371,7 @@ final class TitoloRepository {
 	/** Return the fixed public projection and active-price subquery. */
 	private function public_projection_sql(): string {
 		$base = $this->db->prefix . 'cinebot_';
-		$prices = "SELECT s.evento_id, MIN(p.importo) prezzo_min, MAX(p.importo) prezzo_max FROM {$base}settori s INNER JOIN {$base}prezzi p ON p.settore_id = s.id AND p.sync_active = 1 AND p.stato = 1 WHERE s.sync_active = 1 GROUP BY s.evento_id";
-		return "SELECT e.id evento_id, e.inizio, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, l.nome locale_nome, l.comune, price.prezzo_min, price.prezzo_max FROM {$base}eventi e" . " LEFT JOIN ({$prices}) price ON price.evento_id = e.id";
+		return "SELECT e.id evento_id, e.inizio, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, l.nome locale_nome, l.comune, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a FROM {$base}eventi e";
 	}
 
 	/**

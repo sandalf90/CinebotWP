@@ -39,13 +39,13 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 		self::$db = $wpdb;
 	}
 
-	/** Recreate the synchronization-log table. */
+	/** Install and clear the synchronization-log table. */
 	public function set_up(): void {
 		parent::set_up();
 
 		$this->table = self::$db->prefix . 'cinebot_sync_log';
-		self::$db->query( 'DROP TABLE IF EXISTS ' . $this->table );
 		( new SchemaInstaller( self::$db ) )->install();
+		self::$db->query( 'DELETE FROM ' . $this->table );
 		$this->repository = new SyncLogRepository(
 			self::$db,
 			static function (): string {
@@ -54,9 +54,9 @@ final class SyncLogRepositoryTest extends WP_UnitTestCase {
 		);
 	}
 
-	/** Remove the test table. */
+	/** Clear synchronization-log fixtures. */
 	public function tear_down(): void {
-		self::$db->query( 'DROP TABLE IF EXISTS ' . $this->table );
+		self::$db->query( 'DELETE FROM ' . $this->table );
 
 		parent::tear_down();
 	}

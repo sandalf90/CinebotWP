@@ -31,6 +31,7 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'cinebot_sync_log' );
 
 		$settings    = new SettingsService();
 		$titles      = new TitoloRepository( $wpdb );
@@ -40,6 +41,21 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 		$this->log_page  = new SyncLogPage( $this->logs );
 
 		wp_set_current_user( 1 );
+		add_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
+	}
+
+	/** Restore request and redirect isolation. */
+	public function tear_down(): void {
+		remove_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
+		$_GET     = array();
+		$_POST    = array();
+		$_REQUEST = array();
+		parent::tear_down();
+	}
+
+	/** Stop redirects before WordPress attempts to send test headers. */
+	public function intercept_redirect( $location ) {
+		throw new \WPDieException( is_string( $location ) ? $location : '' );
 	}
 
 	/** Dashboard renders sync status. */
@@ -92,8 +108,8 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 
 	/** Dashboard shows log entry after sync. */
 	public function test_dashboard_shows_log_after_sync(): void {
-		$this->logs->start( 'test-hash' );
-		$this->logs->finish( 1, 'success', array(
+		$log_id = $this->logs->start( 'test-hash' );
+		$this->logs->finish( $log_id, 'success', array(
 			'titoli_added'   => 5,
 			'titoli_updated' => 2,
 			'eventi_added'   => 10,
@@ -171,6 +187,7 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 			'action' => 'cinebot_cleanup_logs',
 			'_wpnonce' => wp_create_nonce( 'cinebot_cleanup_logs' ),
 		);
+		$_REQUEST = $_GET;
 
 		try {
 			$this->log_page->deleteOld();
@@ -192,6 +209,7 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 		$this->expectException( \WPDieException::class );
 
 		$_GET = array( 'action' => 'cinebot_cleanup_logs' );
+		$_REQUEST = $_GET;
 		$this->log_page->deleteOld();
 	}
 
@@ -205,6 +223,7 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 			'action' => 'cinebot_cleanup_logs',
 			'_wpnonce' => wp_create_nonce( 'cinebot_cleanup_logs' ),
 		);
+		$_REQUEST = $_GET;
 		$this->log_page->deleteOld();
 	}
 }

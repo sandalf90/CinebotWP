@@ -53,6 +53,12 @@
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.cinebot-card-link {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+
 .cinebot-card-locandina img {
 	width: 100%;
 	height: 200px;
@@ -138,4 +144,48 @@
 	.cinebot-filters {
 		flex-direction: column;
 	}
+
+	.cinebot-eventi-tabella {
+		font-size: 13px;
+	}
+}
+
+.cinebot-eventi-tabella {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 16px 0;
+	font-size: 14px;
+}
+
+.cinebot-eventi-tabella thead th {
+	text-align: left;
+	padding: 10px 12px;
+	background: #f6f7f7;
+	border-bottom: 2px solid #dcdcde;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.cinebot-eventi-tabella tbody td {
+	padding: 10px 12px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.cinebot-eventi-tabella tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.cinebot-biglietto-link {
+	display: inline-block;
+	padding: 4px 12px;
+	background: var(--cinebot-accent, #d63638);
+	color: #fff;
+	border-radius: 4px;
+	text-decoration: none;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.cinebot-biglietto-link:hover {
+	opacity: 0.9;
 }

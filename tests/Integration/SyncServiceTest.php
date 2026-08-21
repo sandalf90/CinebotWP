@@ -13,8 +13,6 @@ namespace CinebotWp\Tests\Integration;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\ApiClient;
@@ -34,7 +32,7 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		global $wpdb;
 		self::$db = $wpdb;
 		( new SchemaInstaller( self::$db ) )->install();
-		foreach ( array( 'prezzi', 'settori', 'eventi', 'titoli', 'locali', 'sync_log' ) as $suffix ) {
+		foreach ( array( 'eventi', 'titoli', 'locali', 'sync_log' ) as $suffix ) {
 			self::$db->query( 'DELETE FROM ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
 		delete_option( 'cinebot_wp_sync_lock' );
@@ -62,11 +60,8 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		);
 		self::assertSame( 3, $event->stato );
 		self::assertSame( 'Cinema Martinovich', ( new LocaleRepository( self::$db ) )->find( $event->localeId )->nome );
-		$sector = ( new SettoreRepository( self::$db ) )->findByEventoId( $event->id )[0];
-		self::assertSame( 'Posto unico', $sector->nome );
-		$price = ( new PrezzoRepository( self::$db ) )->findBySettoreId( $sector->id )[0];
-		self::assertSame( 'Donne & Uomini INT ON', $price->nome );
-		self::assertSame( '22.00', $price->importo );
+		self::assertSame( '22.00', $title->prezzoDa );
+		self::assertSame( '22.00', $title->prezzoA );
 		self::assertSame( 'success', ( new SyncLogRepository( self::$db ) )->latest()->status );
 	}
 
@@ -254,33 +249,27 @@ final class SyncServiceTest extends WP_UnitTestCase {
 		self::assertSame( array(), ( new TitoloRepository( self::$db ) )->findByRemoteId( 491 )->tag );
 	}
 
-	/** Each disappearing API hierarchy level is deactivated and returns with its local ID. */
-	public function test_reconciliation_deactivates_and_reactivates_each_hierarchy_level(): void {
+	/** Price ranges follow the payload while events and titles retain reconciliation IDs. */
+	public function test_price_range_and_reconciliation_follow_payload(): void {
 		$payload = $this->fixture();
 		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
 		$title_repo = new TitoloRepository( self::$db );
 		$event_repo = new EventoRepository( self::$db );
-		$sector_repo = new SettoreRepository( self::$db );
-		$price_repo = new PrezzoRepository( self::$db );
 		$title = $title_repo->findByRemoteId( 491 );
 		$event = $event_repo->findByRemoteId( 2920 );
-		$sector = $sector_repo->findByEventoId( $event->id )[0];
-		$price = $price_repo->findBySettoreId( $sector->id )[0];
 
 		$without_price = $payload;
 		$without_price['programmazione'][0]['titoli'][0]['eventi'][0]['settori'][0]['prezzi'] = array();
 		self::assertTrue( $this->service()->syncPayload( $without_price )->isSuccess() );
-		self::assertSame( 0, $price_repo->findBySettoreId( $sector->id )[0]->syncActive );
+		self::assertNull( $title_repo->findByRemoteId( 491 )->prezzoDa );
+		self::assertNull( $title_repo->findByRemoteId( 491 )->prezzoA );
 		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
-		self::assertSame( $price->id, $price_repo->findBySettoreId( $sector->id )[0]->id );
-		self::assertSame( 1, $price_repo->findBySettoreId( $sector->id )[0]->syncActive );
+		self::assertSame( '22.00', $title_repo->findByRemoteId( 491 )->prezzoDa );
 
 		$without_sector = $payload;
 		$without_sector['programmazione'][0]['titoli'][0]['eventi'][0]['settori'] = array();
 		self::assertTrue( $this->service()->syncPayload( $without_sector )->isSuccess() );
-		self::assertSame( 0, $sector_repo->findByEventoId( $event->id )[0]->syncActive );
-		self::assertTrue( $this->service()->syncPayload( $payload )->isSuccess() );
-		self::assertSame( $sector->id, $sector_repo->findByEventoId( $event->id )[0]->id );
+		self::assertNull( $title_repo->findByRemoteId( 491 )->prezzoDa );
 
 		$without_event = $payload;
 		$without_event['programmazione'][0]['titoli'][0]['eventi'] = array();
@@ -343,6 +332,7 @@ final class SyncServiceTest extends WP_UnitTestCase {
 
 	/** An event persistence failure rolls back earlier title and venue writes. */
 	public function test_event_insert_failure_rolls_back_partial_hierarchy_and_logs_safely(): void {
+		self::$db->query( 'COMMIT' );
 		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
 			public function query( $query ) {
 				if ( is_string( $query ) && false !== strpos( $query, 'cinebot_eventi' ) && 1 === preg_match( '/^INSERT /i', $query ) ) {
@@ -359,7 +349,7 @@ final class SyncServiceTest extends WP_UnitTestCase {
 			self::assertSame( 0, ( new TitoloRepository( self::$db ) )->count() );
 			self::assertNull( ( new EventoRepository( self::$db ) )->findByRemoteId( 2920 ) );
 			self::assertSame( 0, ( new LocaleRepository( self::$db ) )->count() );
-			$log = ( new SyncLogRepository( self::$db ) )->latest();
+			$log = ( new SyncLogRepository( $failing_db ) )->latest();
 			self::assertSame( 'error', $log->status );
 			self::assertSame( 'Schedule synchronization failed.', $log->errorMessage );
 		} finally {
@@ -369,6 +359,7 @@ final class SyncServiceTest extends WP_UnitTestCase {
 
 	/** A reported rollback failure remains safe and is recorded without database detail. */
 	public function test_rollback_query_failure_is_recorded_as_safe_error(): void {
+		self::$db->query( 'COMMIT' );
 		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
 			public function query( $query ) {
 				$result = parent::query( $query );
@@ -383,7 +374,7 @@ final class SyncServiceTest extends WP_UnitTestCase {
 			$result = $this->service( $failing_db )->syncPayload( $payload );
 			self::assertSame( 'error', $result->status() );
 			self::assertSame( 'Schedule synchronization failed.', $result->message() );
-			$log = ( new SyncLogRepository( self::$db ) )->latest();
+			$log = ( new SyncLogRepository( $failing_db ) )->latest();
 			self::assertSame( 'error', $log->status );
 			self::assertSame( 'Schedule synchronization rollback could not be confirmed.', $log->errorMessage );
 			self::assertStringNotContainsString( 'ROLLBACK', $log->errorMessage );
@@ -411,8 +402,6 @@ final class SyncServiceTest extends WP_UnitTestCase {
 			null,
 			new TitoloRepository( $db ),
 			new EventoRepository( $db ),
-			new SettoreRepository( $db ),
-			new PrezzoRepository( $db ),
 			new LocaleRepository( $db ),
 			new SyncLogRepository( $db )
 		);

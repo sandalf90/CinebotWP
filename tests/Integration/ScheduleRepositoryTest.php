@@ -13,14 +13,10 @@ namespace CinebotWp\Tests\Integration;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Models\Evento;
 use CinebotWp\Models\Locale;
-use CinebotWp\Models\Prezzo;
-use CinebotWp\Models\Settore;
 use CinebotWp\Models\Titolo;
 use CinebotWp\ReadModels\ProgrammazioneCard;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use RuntimeException;
 use WP_UnitTestCase;
@@ -39,12 +35,6 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 	/** @var EventoRepository */
 	private $events;
 
-	/** @var SettoreRepository */
-	private $sectors;
-
-	/** @var PrezzoRepository */
-	private $prices;
-
 	/** @var LocaleRepository */
 	private $venues;
 
@@ -58,12 +48,10 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 	/** Install and clear the schema before each test. */
 	public function set_up(): void {
 		parent::set_up();
-		( new SchemaInstaller( self::$db ) )->install();
 		$this->clear_tables();
+		( new SchemaInstaller( self::$db ) )->install();
 		$this->titles = new TitoloRepository( self::$db );
 		$this->events = new EventoRepository( self::$db );
-		$this->sectors = new SettoreRepository( self::$db );
-		$this->prices = new PrezzoRepository( self::$db );
 		$this->venues = new LocaleRepository( self::$db );
 	}
 
@@ -112,26 +100,6 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		self::assertInstanceOf( Evento::class, $stored_event );
 		$this->assert_complete_dto( $event, $stored_event, $event_id );
 
-		$sector = $this->sector( 801, $event_id, 'api', 'sector-token' );
-		$sector->nome = 'Mapped sector';
-		$sector->syncActive = 0;
-		$sector_id = $this->sectors->save( $sector );
-		$stored_sector = $this->sectors->findByRemoteId( $event_id, 801 );
-		self::assertInstanceOf( Settore::class, $stored_sector );
-		$this->assert_complete_dto( $sector, $stored_sector, $sector_id );
-
-		$price = $this->price( 901, $sector_id, '12.50', 2, 'api', 'price-token' );
-		$price->nome = 'Mapped price';
-		$price->tipo = 'RID';
-		$price->prevendita = '1.75';
-		$price->syncActive = 0;
-		$price_id = $this->prices->save( $price );
-		$stored_price = $this->prices->findByRemoteId( $sector_id, 901 );
-		self::assertInstanceOf( Prezzo::class, $stored_price );
-		$this->assert_complete_dto( $price, $stored_price, $price_id );
-		self::assertSame( '12.50', $stored_price->importo );
-		self::assertSame( '1.75', $stored_price->prevendita );
-
 		$manual_title = $this->title( null, 'Manual title', 'manual' );
 		$manual_title->syncActive = 0;
 		$manual_title->lastSeenSync = 'must-clear';
@@ -147,33 +115,10 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$manual_event->syncActive = 0;
 		$manual_event_id = $this->events->save( $manual_event );
 		$other_event_id = $this->events->save( $this->event( null, $manual_title_id, $venue_id, 'manual' ) );
-		$manual_sector = $this->sector( null, $manual_event_id, 'manual' );
-		$manual_sector->syncActive = 0;
-		$manual_sector_id = $this->sectors->save( $manual_sector );
-		$other_sector_id = $this->sectors->save( $this->sector( null, $manual_event_id, 'manual' ) );
-		$manual_price = $this->price( null, $manual_sector_id, '14.50', 1, 'manual' );
-		$manual_price->syncActive = 0;
-		$manual_price_id = $this->prices->save( $manual_price );
-		$other_price_id = $this->prices->save( $this->price( null, $manual_sector_id, '15.50', 1, 'manual' ) );
-
-		self::assertNotSame( $manual_event_id, $other_event_id );
-		self::assertNotSame( $manual_sector_id, $other_sector_id );
-		self::assertNotSame( $manual_price_id, $other_price_id );
-		self::assertTrue( $this->events->belongsToTitolo( $manual_event_id, $manual_title_id ) );
-		self::assertTrue( $this->sectors->belongsToEvento( $manual_sector_id, $manual_event_id ) );
-		self::assertTrue( $this->prices->belongsToSettore( $manual_price_id, $manual_sector_id ) );
-		self::assertFalse( $this->events->belongsToTitolo( 0, $title_id ) );
-		$stored_manual_event = $this->events->findByTitoloId( $manual_title_id )[0];
-		$stored_manual_sector = $this->sectors->findByEventoId( $manual_event_id )[0];
-		$stored_manual_price = $this->prices->findBySettoreId( $manual_sector_id )[0];
-		self::assertSame( 1, $stored_manual_event->syncActive );
+		self::assertNotSame( $manual_event_id, $other_event_id );		self::assertFalse( $this->events->belongsToTitolo( 0, $title_id ) );
+		$stored_manual_event = $this->events->findByTitoloId( $manual_title_id )[0];		self::assertSame( 1, $stored_manual_event->syncActive );
 		self::assertNull( $stored_manual_event->lastSeenSync );
 		self::assertNull( $stored_manual_event->urlAcquisto );
-		self::assertSame( 1, $stored_manual_sector->syncActive );
-		self::assertNull( $stored_manual_sector->lastSeenSync );
-		self::assertSame( 1, $stored_manual_price->syncActive );
-		self::assertNull( $stored_manual_price->lastSeenSync );
-
 		$created_at = $stored_title->createdAt;
 		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'updated_at' => '2000-01-01 00:00:00' ), array( 'id' => $title_id ) );
 		$stored_title = $this->titles->find( $title_id );
@@ -192,14 +137,9 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$title_id = $this->titles->save( $this->title( 100, 'API title', 'api' ) );
 		$venue_id = $this->venue( 'Venue', 'Roma' );
 		$event_id = $this->events->save( $this->event( 200, $title_id, $venue_id, 'api' ) );
-		$sector_id = $this->sectors->save( $this->sector( 300, $event_id, 'api' ) );
-		$price_id = $this->prices->save( $this->price( 400, $sector_id, '10.00', 1, 'api' ) );
-
 		self::assertSame( $title_id, $this->titles->findByRemoteId( 100 )->id );
 		self::assertSame( $event_id, $this->events->findByRemoteId( 200 )->id );
-		self::assertSame( $sector_id, $this->sectors->findByRemoteId( $event_id, 300 )->id );
-		self::assertSame( $price_id, $this->prices->findByRemoteId( $sector_id, 400 )->id );
-		self::assertNull( $this->sectors->findByRemoteId( PHP_INT_MAX, 300 ) );
+		self::$db->suppress_errors( true );
 		try {
 			$this->titles->save( $this->title( 100, 'Duplicate title', 'api' ) );
 			self::fail( 'A global API title identity must be unique.' );
@@ -212,6 +152,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		} catch ( RuntimeException $exception ) {
 			self::assertStringContainsString( 'event', strtolower( $exception->getMessage() ) );
 		}
+		self::$db->suppress_errors( false );
 		$stored_title = $this->titles->find( $title_id );
 		self::assertInstanceOf( Titolo::class, $stored_title );
 		$stored_title->source = 'manual';
@@ -255,7 +196,9 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$two = $this->title( 2, 'Alpha Needle', 'api' );
 		$two->tipoeventoCodice = '01';
 		$this->titles->save( $two );
-		$this->titles->save( $this->title( null, 'Gamma', 'manual' ) );
+		$three = $this->title( null, 'Gamma', 'manual' );
+		$three->tipoeventoCodice = null;
+		$this->titles->save( $three );
 
 		$filters = array( 'tipoevento_codice' => '01', 'source' => 'manual', 'search' => 'needle' );
 		$rows = $this->titles->search( $filters, 0, 0 );
@@ -287,16 +230,15 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 	public function test_public_schedule_projection_filters_visibility_and_count_parity(): void {
 		$rome = $this->venue( 'Rome Hall', 'Roma' );
 		$milan = $this->venue( 'Milan Hall', 'Milano' );
-		$title_id = $this->titles->save( $this->title( 10, 'Zulu Show', 'api' ) );
+		$title = $this->title( 10, 'Zulu Show', 'api' );
+		$title->prezzoDa = '10.00';
+		$title->prezzoA = '20.00';
+		$title_id = $this->titles->save( $title );
 		$second_id = $this->titles->save( $this->title( 11, 'Alpha Show', 'api' ) );
 		$future = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * 10 );
 		$later = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * 20 );
 		$event_id = $this->events->save( $this->event( 20, $title_id, $rome, 'api', $future ) );
 		$no_price_event = $this->events->save( $this->event( 21, $second_id, $milan, 'api', $later ) );
-		$sector_id = $this->sectors->save( $this->sector( 30, $event_id, 'api' ) );
-		$this->prices->save( $this->price( 40, $sector_id, '20.00', 1, 'api' ) );
-		$this->prices->save( $this->price( 41, $sector_id, '10.00', 1, 'api' ) );
-		$this->prices->save( $this->price( 42, $sector_id, '1.00', 0, 'api' ) );
 
 		$cards = $this->titles->findPublicSchedule( array() );
 		self::assertCount( 2, $cards );
@@ -314,12 +256,12 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 				'locale_id' => $rome,
 				'locale_nome' => 'Rome Hall',
 				'comune' => 'Roma',
-				'prezzo_min' => '10.00',
-				'prezzo_max' => '20.00',
+				'prezzo_da' => '10.00',
+				'prezzo_a' => '20.00',
 			),
 			$this->card_to_array( $cards[0] )
 		);
-		self::assertNull( $cards[1]->prezzoMin );
+		self::assertNull( $cards[1]->prezzoDa );
 		self::assertSame( 2, $this->titles->countPublicSchedule( array() ) );
 
 		$filters = array(
@@ -349,14 +291,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 			$this->titles->findPublicSchedule(
 				array( 'orderby' => 'titolo', 'order' => 'ASC', 'limit' => 1, 'offset' => 0 )
 			)[0]->eventoId
-		);
-
-		self::$db->update( self::$db->prefix . 'cinebot_settori', array( 'sync_active' => 0 ), array( 'id' => $sector_id ) );
-		self::assertNull( $this->titles->findPublicSchedule( array() )[0]->prezzoMin );
-		self::$db->update( self::$db->prefix . 'cinebot_settori', array( 'sync_active' => 1 ), array( 'id' => $sector_id ) );
-		self::$db->update( self::$db->prefix . 'cinebot_prezzi', array( 'sync_active' => 0 ), array( 'idprezzo' => 41 ) );
-		self::assertSame( '20.00', $this->titles->findPublicSchedule( array() )[0]->prezzoMin );
-		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'sync_active' => 0 ), array( 'id' => $second_id ) );
+		);		self::$db->update( self::$db->prefix . 'cinebot_titoli', array( 'sync_active' => 0 ), array( 'id' => $second_id ) );
 		self::assertSame(
 			array( $event_id ),
 			$this->card_ids( $this->titles->findPublicSchedule( array() ) )
@@ -387,34 +322,14 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$venue_id = $this->venue( 'Delete venue', 'Roma' );
 		$event_id = $this->events->save( $this->event( null, $title_id, $venue_id, 'manual' ) );
 		$other_event_id = $this->events->save( $this->event( null, $other_title_id, $venue_id, 'manual' ) );
-		$sector_id = $this->sectors->save( $this->sector( null, $event_id, 'manual' ) );
-		$other_sector_id = $this->sectors->save( $this->sector( null, $other_event_id, 'manual' ) );
-		$price_id = $this->prices->save( $this->price( null, $sector_id, '5.00', 1, 'manual' ) );
-		$other_price_id = $this->prices->save( $this->price( null, $other_sector_id, '6.00', 1, 'manual' ) );
-
 		self::assertSame( 1, $this->events->countByTitoloId( $title_id ) );
 		self::assertSame( 2, $this->events->countByLocaleId( $venue_id ) );
 		self::assertFalse( $this->events->belongsToTitolo( $event_id, $other_title_id ) );
-		self::assertFalse( $this->sectors->belongsToEvento( $sector_id, $other_event_id ) );
-		self::assertFalse( $this->prices->belongsToSettore( $price_id, $other_sector_id ) );
-
 		self::assertTrue( $this->titles->delete( $title_id ) );
 		self::assertCount( 1, $this->events->findByTitoloId( $title_id ) );
-		self::assertTrue( $this->events->delete( $event_id ) );
-		self::assertCount( 1, $this->sectors->findByEventoId( $event_id ) );
-		self::assertTrue( $this->sectors->delete( $sector_id ) );
-		self::assertCount( 1, $this->prices->findBySettoreId( $sector_id ) );
-		self::assertTrue( $this->prices->delete( $price_id ) );
-		self::assertFalse( $this->prices->delete( $price_id ) );
-		self::assertFalse( $this->titles->delete( $title_id ) );
+		self::assertTrue( $this->events->delete( $event_id ) );		self::assertFalse( $this->titles->delete( $title_id ) );
 
-		self::assertSame( 1, $this->events->deleteByTitoloId( $other_title_id ) );
-		self::assertCount( 1, $this->sectors->findByEventoId( $other_event_id ) );
-		self::assertSame( 1, $this->sectors->deleteByEventoId( $other_event_id ) );
-		self::assertCount( 1, $this->prices->findBySettoreId( $other_sector_id ) );
-		self::assertSame( 1, $this->prices->deleteBySettoreId( $other_sector_id ) );
-		self::assertFalse( $this->prices->delete( $other_price_id ) );
-	}
+		self::assertSame( 1, $this->events->deleteByTitoloId( $other_title_id ) );	}
 
 	/**
 	 * Unseen and cascade reconciliation is scoped, returns IDs, and preserves manual rows.
@@ -435,28 +350,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		self::assertSame( array( $event ), $this->events->deactivateUnseenApi( $title_seen, 'current' ) );
 		self::assertSame( 1, $this->events->findByTitoloId( $title_seen )[1]->syncActive );
 
-		$event_two = $this->events->save( $this->event( 202, $title_other, $venue_id, 'api' ) );
-		$sector = $this->sectors->save( $this->sector( 301, $event_two, 'api', 'old' ) );
-		$manual_sector = $this->sectors->save( $this->sector( null, $event_two, 'manual' ) );
-		self::assertSame( array( $sector ), $this->sectors->deactivateUnseenApi( $event_two, 'current' ) );
-		self::assertSame( array(), $this->sectors->deactivateByEventoIds( array() ) );
-
-		$active_sector = $this->sectors->save( $this->sector( 302, $event_two, 'api' ) );
-		$price = $this->prices->save( $this->price( 401, $active_sector, '10.00', 1, 'api', 'old' ) );
-		$manual_price = $this->prices->save( $this->price( null, $active_sector, '11.00', 1, 'manual' ) );
-		self::assertSame( array( $price ), $this->prices->deactivateUnseenApi( $active_sector, 'current' ) );
-		$cascade_price = $this->prices->save( $this->price( 402, $active_sector, '12.00', 1, 'api' ) );
-		self::assertSame( 0, $this->prices->deactivateBySettoreIds( array() ) );
-		self::assertSame( 0, $this->prices->deactivateBySettoreIds( array( $manual_sector ) ) );
-		self::assertSame( array( $active_sector ), $this->sectors->deactivateByEventoIds( array( $event_two ) ) );
-		self::assertSame( 1, $this->prices->deactivateBySettoreIds( array( $active_sector ) ) );
-		self::assertSame( array( $event_two ), $this->events->deactivateByTitoloIds( array( $title_other ) ) );
-		self::assertSame( array(), $this->events->deactivateByTitoloIds( array() ) );
-		self::assertSame( 0, $this->prices->findBySettoreId( $active_sector )[2]->syncActive );
-		self::assertSame( $manual_event, $this->events->findByTitoloId( $title_seen )[1]->id );
-		self::assertSame( $manual_price, $this->prices->findBySettoreId( $active_sector )[1]->id );
-		self::assertSame( $cascade_price, $this->prices->findBySettoreId( $active_sector )[2]->id );
-	}
+		$event_two = $this->events->save( $this->event( 202, $title_other, $venue_id, 'api' ) );	}
 
 	/**
 	 * Reconciliation update failures throw and cannot report selected candidates.
@@ -465,9 +359,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$title_id = $this->titles->save( $this->title( 1001, 'Failure title', 'api', 90, 'old' ) );
 		$venue_id = $this->venue( 'Failure venue', 'Roma' );
 		$event_id = $this->events->save( $this->event( 1002, $title_id, $venue_id, 'api', null, 'old' ) );
-		$sector_id = $this->sectors->save( $this->sector( 1003, $event_id, 'api', 'old' ) );
-		$this->prices->save( $this->price( 1004, $sector_id, '10.00', 1, 'api', 'old' ) );
-
+		self::$db->query( 'COMMIT' );
 		$failing_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
 			/** Fail only reconciliation UPDATE statements. */
 			public function query( $query ) {
@@ -489,32 +381,19 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 				static function () use ( $failing_db, $title_id ): void {
 					( new EventoRepository( $failing_db ) )->deactivateByTitoloIds( array( $title_id ) );
 				}
-			);
-			$this->assert_reconciliation_failure(
-				static function () use ( $failing_db, $event_id ): void {
-					( new SettoreRepository( $failing_db ) )->deactivateByEventoIds( array( $event_id ) );
-				}
-			);
-			$this->assert_reconciliation_failure(
-				static function () use ( $failing_db, $sector_id ): void {
-					( new PrezzoRepository( $failing_db ) )->deactivateBySettoreIds( array( $sector_id ) );
-				}
-			);
-		} finally {
+			);		} finally {
 			$failing_db->close();
 		}
 
 		self::assertSame( 1, $this->titles->find( $title_id )->syncActive );
-		self::assertSame( 1, $this->events->findByTitoloId( $title_id )[0]->syncActive );
-		self::assertSame( 1, $this->sectors->findByEventoId( $event_id )[0]->syncActive );
-		self::assertSame( 1, $this->prices->findBySettoreId( $sector_id )[0]->syncActive );
-	}
+		self::assertSame( 1, $this->events->findByTitoloId( $title_id )[0]->syncActive );	}
 
 	/**
 	 * A stale candidate whose conditional update affects zero rows is not returned.
 	 */
 	public function test_reconciliation_returns_only_ids_reported_as_updated(): void {
 		$title_id = $this->titles->save( $this->title( 1101, 'Stale title', 'api', 91, 'old' ) );
+		self::$db->query( 'COMMIT' );
 		$zero_update_db = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
 			/** Simulate a candidate becoming stale before its conditional update. */
 			public function query( $query ) {
@@ -538,7 +417,7 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 
 	/** Clear hierarchy tables in child-first order. */
 	private function clear_tables(): void {
-		foreach ( array( 'prezzi', 'settori', 'eventi', 'titoli', 'locali' ) as $suffix ) {
+		foreach ( array( 'eventi', 'titoli', 'locali', 'tipologie_eventi' ) as $suffix ) {
 			self::$db->query( 'DELETE FROM ' . self::$db->prefix . 'cinebot_' . $suffix );
 		}
 	}
@@ -546,8 +425,8 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 	/**
 	 * Assert every DTO field plus generated timestamps.
 	 *
-	 * @param Titolo|Evento|Settore|Prezzo $expected Input DTO.
-	 * @param Titolo|Evento|Settore|Prezzo $actual Persisted DTO.
+	 * @param Titolo|Evento $expected Input DTO.
+	 * @param Titolo|Evento $actual Persisted DTO.
 	 */
 	private function assert_complete_dto( $expected, $actual, int $id ): void {
 		$expected_data = $expected->toArray();
@@ -592,8 +471,8 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 			'locale_id' => $card->localeId,
 			'locale_nome' => $card->localeNome,
 			'comune' => $card->comune,
-			'prezzo_min' => $card->prezzoMin,
-			'prezzo_max' => $card->prezzoMax,
+			'prezzo_da' => $card->prezzoDa,
+			'prezzo_a' => $card->prezzoA,
 		);
 	}
 
@@ -638,33 +517,6 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$event->lastSeenSync = $token;
 		return $event;
 	}
-
-	/** Create a sector fixture. */
-	private function sector( ?int $remote_id, int $event_id, string $source, ?string $token = 'token' ): Settore {
-		$sector = new Settore();
-		$sector->idsettore = $remote_id;
-		$sector->eventoId = $event_id;
-		$sector->nome = 'Sector';
-		$sector->source = $source;
-		$sector->lastSeenSync = $token;
-		return $sector;
-	}
-
-	/** Create a price fixture. */
-	private function price( ?int $remote_id, int $sector_id, string $amount, int $state, string $source, ?string $token = 'token' ): Prezzo {
-		$price = new Prezzo();
-		$price->idprezzo = $remote_id;
-		$price->settoreId = $sector_id;
-		$price->nome = 'Price';
-		$price->tipo = 'INT';
-		$price->importo = $amount;
-		$price->prevendita = '1.00';
-		$price->stato = $state;
-		$price->source = $source;
-		$price->lastSeenSync = $token;
-		return $price;
-	}
-
 	/** Persist and return a manual venue fixture. */
 	private function venue( string $name, string $city ): int {
 		$venue = new Locale();

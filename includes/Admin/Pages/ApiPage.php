@@ -82,6 +82,15 @@ final class ApiPage {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="cinebot_detail_slug"><?php esc_html_e( 'Detail Page Slug', 'cinebot-wp' ); ?></label></th>
+						<td>
+							<input type="text" id="cinebot_detail_slug" name="detail_slug"
+								value="<?php echo esc_attr( $settings['detail_slug'] ?? '' ); ?>"
+								class="regular-text" placeholder="es. spettacolo" />
+							<p class="description"><?php esc_html_e( 'Optional slug to enable pretty permalinks for event details (e.g., "spettacolo" for /spettacolo/15/title/).', 'cinebot-wp' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="cinebot_frequency"><?php esc_html_e( 'Sync frequency', 'cinebot-wp' ); ?></label></th>
 						<td>
 							<select id="cinebot_frequency" name="sync_frequency">
@@ -137,10 +146,12 @@ final class ApiPage {
 	public function testConnection(): void {
 		if ( ! check_ajax_referer( 'cinebot_wp_admin', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
+			return;
 		}
 
 		if ( ! current_user_can( $this->capability() ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'cinebot-wp' ) ), 403 );
+			return;
 		}
 
 		try {
@@ -155,14 +166,17 @@ final class ApiPage {
 			wp_send_json_success( array(
 				'titoli_count' => $titoli,
 			) );
+			return;
 		} catch ( ApiException $e ) {
 			wp_send_json_error( array(
 				'message' => $e->getMessage(),
 			) );
+			return;
 		} catch ( Throwable $e ) {
 			wp_send_json_error( array(
 				'message' => __( 'Unable to connect to the Cinebot API.', 'cinebot-wp' ),
 			) );
+			return;
 		}
 	}
 
@@ -170,10 +184,12 @@ final class ApiPage {
 	public function syncNow(): void {
 		if ( ! check_ajax_referer( 'cinebot_wp_admin', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
+			return;
 		}
 
 		if ( ! current_user_can( $this->capability() ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'cinebot-wp' ) ), 403 );
+			return;
 		}
 
 		$result = $this->sync->sync();
@@ -183,11 +199,13 @@ final class ApiPage {
 				'stats'   => $result->stats(),
 				'message' => $result->message(),
 			) );
+			return;
 		}
 
 		wp_send_json_error( array(
 			'message' => $result->message(),
 		) );
+		return;
 	}
 
 	/** Return the filtered admin capability. */

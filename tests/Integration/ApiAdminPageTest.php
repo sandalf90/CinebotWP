@@ -14,10 +14,9 @@ use CinebotWp\Admin\Pages\TitoloEditPage;
 use CinebotWp\Admin\Pages\TitoliListPage;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
-use CinebotWp\Repositories\PrezzoRepository;
-use CinebotWp\Repositories\SettoreRepository;
 use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
+use CinebotWp\Repositories\SyncLogRepository;
 use CinebotWp\Services\SettingsService;
 use CinebotWp\Services\SyncService;
 use WP_UnitTestCase;
@@ -44,6 +43,21 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 	/** @var TitoloEditPage */
 	private $edit_page;
 
+	/** @var TitoloRepository */
+	private $titles;
+
+	/** @var EventoRepository */
+	private $events;
+
+	/** @var TipologiaRepository */
+	private $types;
+
+	/** @var LocaleRepository */
+	private $venues;
+
+	/** @var SyncLogRepository */
+	private $logs;
+
 	/** Set up page collaborators with isolated settings. */
 	public function set_up(): void {
 		parent::set_up();
@@ -57,47 +71,49 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 
 		$this->settings_service = new SettingsService();
 		$this->sync_service     = new SyncService( $GLOBALS['wpdb'] );
+		global $wpdb;
+		$this->titles = new TitoloRepository( $wpdb );
+		$this->events = new EventoRepository( $wpdb );
+		$this->types  = new TipologiaRepository( $wpdb );
+		$this->venues = new LocaleRepository( $wpdb );
+		$this->logs   = new SyncLogRepository( $wpdb );
+
 		$this->api_page         = new ApiPage(
 			$this->settings_service,
 			$this->scheduler(),
 			$this->sync_service
 		);
-		$this->dashboard_page   = new DashboardPage( $this->settings_service, $titolo_repo, $log_repo );
-
-		global $wpdb;
-		$titolo_repo  = new TitoloRepository( $wpdb );
-		$evento_repo  = new EventoRepository( $wpdb );
-		$settore_repo = new SettoreRepository( $wpdb );
-		$prezzo_repo  = new PrezzoRepository( $wpdb );
-		$tipo_repo    = new TipologiaRepository( $wpdb );
-		$locale_repo  = new LocaleRepository( $wpdb );
-		$log_repo     = new \CinebotWp\Repositories\SyncLogRepository( $wpdb );
+		$this->dashboard_page   = new DashboardPage( $this->settings_service, $this->titles, $this->logs );
 
 		$this->titoli_page = new TitoliListPage(
-			$titolo_repo,
-			$evento_repo,
-			$settore_repo,
-			$prezzo_repo,
-			$tipo_repo
+			$this->titles,
+			$this->events,
+			$this->types
 		);
 
 		$this->edit_page = new TitoloEditPage(
-			$titolo_repo,
-			$evento_repo,
-			$settore_repo,
-			$prezzo_repo,
-			$tipo_repo,
-			$locale_repo
+			$this->titles,
+			$this->events,
+			$this->types,
+			$this->venues
 		);
-
-		$this->dashboard_page = new DashboardPage( $this->settings_service, $titolo_repo, $log_repo );
+		add_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 	}
 
 	/** Restore settings isolation. */
 	public function tear_down(): void {
+		remove_filter( 'wp_redirect', array( $this, 'intercept_redirect' ) );
 		delete_option( 'cinebot_wp_settings' );
 		delete_option( 'cinebot_wp_encryption_salt' );
+		$_POST    = array();
+		$_GET     = array();
+		$_REQUEST = array();
 		parent::tear_down();
+	}
+
+	/** Stop redirects before WordPress attempts to send test headers. */
+	public function intercept_redirect( $location ) {
+		throw new \WPDieException( is_string( $location ) ? $location : '' );
 	}
 
 	/** Admin menu should register top-level and submenu hooks. */
@@ -107,11 +123,11 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			$this->api_page,
 			$this->titoli_page,
 			$this->edit_page,
-			new \CinebotWp\Admin\Pages\LocaliListPage( $locale_repo, $titolo_repo, $evento_repo ),
-			new \CinebotWp\Admin\Pages\LocaleEditPage( $locale_repo ),
-			new \CinebotWp\Admin\Pages\TipologieListPage( $tipo_repo ),
-			new \CinebotWp\Admin\Pages\TipologiaEditPage( $tipo_repo ),
-			new \CinebotWp\Admin\Pages\SyncLogPage( $log_repo )
+			new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->titles, $this->events ),
+			new \CinebotWp\Admin\Pages\LocaleEditPage( $this->venues ),
+			new \CinebotWp\Admin\Pages\TipologieListPage( $this->types ),
+			new \CinebotWp\Admin\Pages\TipologiaEditPage( $this->types ),
+			new \CinebotWp\Admin\Pages\SyncLogPage( $this->logs )
 		);
 		$menu->register();
 
@@ -152,6 +168,7 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			'sync_frequency'       => 'daily',
 			'sync_enabled'         => '1',
 		);
+		$_REQUEST = $_POST;
 
 		try {
 			$this->api_page->save();
@@ -183,6 +200,7 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			'api_password'         => '',
 			'sync_frequency'       => 'weekly',
 		);
+		$_REQUEST = $_POST;
 
 		try {
 			$this->api_page->save();

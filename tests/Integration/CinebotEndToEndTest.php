@@ -20,13 +20,29 @@ use WP_UnitTestCase;
  * Verifies the complete plugin lifecycle: activation, settings, sync, shortcode, reconciliation, deactivation.
  */
 final class CinebotEndToEndTest extends WP_UnitTestCase {
+	/** Start each lifecycle test without rows left by other integration tests. */
+	public function set_up(): void {
+		parent::set_up();
+		Plugin::activate();
+		$this->clear_schedule_rows();
+	}
+
+	/** Remove lifecycle rows so later test classes start clean. */
+	public function tear_down(): void {
+		Plugin::deactivate();
+		$this->clear_schedule_rows();
+		delete_option( 'cinebot_wp_settings' );
+		delete_option( 'cinebot_wp_encryption_salt' );
+		parent::tear_down();
+	}
+
 	/** Full lifecycle: activate, configure, sync, render, deactivate. */
 	public function test_full_lifecycle(): void {
 		// 1. Activate: schema + 62 types installed.
 		Plugin::activate();
 		global $wpdb;
 
-		$suffixes = array( 'titoli', 'eventi', 'settori', 'prezzi', 'locali', 'tipologie_eventi', 'sync_log' );
+		$suffixes = array( 'titoli', 'eventi', 'locali', 'tipologie_eventi', 'sync_log' );
 		foreach ( $suffixes as $suffix ) {
 			$table = $wpdb->prefix . 'cinebot_' . $suffix;
 			self::assertSame( $table, $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) );
@@ -34,6 +50,9 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 
 		$types = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cinebot_tipologie_eventi" );
 		self::assertSame( '62', (string) $types );
+		foreach ( array( 'eventi', 'titoli', 'locali', 'sync_log' ) as $suffix ) {
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'cinebot_' . $suffix );
+		}
 
 		// 2. Save API settings.
 		$settings = new SettingsService();
@@ -78,7 +97,7 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 			"SELECT titolo FROM {$wpdb->prefix}cinebot_titoli WHERE source = 'api' LIMIT 1"
 		);
 		if ( null !== $first_title ) {
-			self::assertStringContainsString( $first_title, $html, 'Imported title should appear in shortcode output' );
+			self::assertStringContainsString( esc_html( $first_title ), $html, 'Imported title should appear in shortcode output' );
 		}
 
 		// 7. Create a manual title, re-import, assert it remains unchanged.
@@ -132,7 +151,16 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 		self::assertGreaterThan( 0, $events_before );
 
 		// Import empty payload — all API events should be deactivated.
-		$sync->syncPayload( array( 'programmazione' => array() ) );
+		$sync->syncPayload(
+			array(
+				'programmazione' => array(
+					array(
+						'frontend' => 50,
+						'titoli'   => array(),
+					),
+				),
+			)
+		);
 
 		$active_events = (int) $wpdb->get_var(
 			$wpdb->prepare(
@@ -219,6 +247,15 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 		self::assertStringNotContainsString( 'Non-State-3 Show', $html, 'stato=2 event should not be public' );
 
 		Plugin::deactivate();
+	}
+
+	/** Clear current schedule rows in child-first order. */
+	private function clear_schedule_rows(): void {
+		global $wpdb;
+		foreach ( array( 'eventi', 'titoli', 'locali', 'sync_log' ) as $suffix ) {
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'cinebot_' . $suffix );
+		}
+		delete_option( 'cinebot_wp_sync_lock' );
 	}
 
 	/** Manual title remains unchanged after re-import. */

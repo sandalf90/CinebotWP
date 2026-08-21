@@ -37,6 +37,7 @@ final class SettingsService {
 	 *     sync_frequency:string,
 	 *     sync_enabled:bool,
 	 *     api_base_url:string,
+	 *     detail_slug:string,
 	 *     has_password:bool
 	 * }
 	 */
@@ -49,6 +50,7 @@ final class SettingsService {
 			'sync_frequency' => $this->normalizeFrequency( $settings['sync_frequency'] ?? 'daily' ),
 			'sync_enabled'   => $this->normalizeEnabled( $settings['sync_enabled'] ?? false ),
 			'api_base_url'   => $this->normalizeBaseUrl( $settings['api_base_url'] ?? self::DEFAULT_BASE_URL ),
+			'detail_slug'    => $this->normalizeDetailSlug( $settings['detail_slug'] ?? '' ),
 			'has_password'   => isset( $settings['api_password'] )
 				&& is_string( $settings['api_password'] )
 				&& '' !== $settings['api_password'],
@@ -65,6 +67,7 @@ final class SettingsService {
 	 *     sync_frequency:string,
 	 *     sync_enabled:bool,
 	 *     api_base_url:string,
+	 *     detail_slug:string,
 	 *     has_password:bool
 	 * }
 	 */
@@ -76,6 +79,7 @@ final class SettingsService {
 			'sync_frequency' => $this->normalizeFrequency( $input['sync_frequency'] ?? 'daily' ),
 			'sync_enabled'   => $this->normalizeEnabled( $input['sync_enabled'] ?? false ),
 			'api_base_url'   => $this->normalizeBaseUrl( $input['api_base_url'] ?? self::DEFAULT_BASE_URL ),
+			'detail_slug'    => $this->normalizeDetailSlug( $input['detail_slug'] ?? '' ),
 		);
 
 		$password = $input['api_password'] ?? '';
@@ -146,6 +150,13 @@ final class SettingsService {
 	}
 
 	/**
+	 * Returns the detail page slug.
+	 */
+	public function detailSlug(): string {
+		return $this->get()['detail_slug'];
+	}
+
+	/**
 	 * Reads the settings option as an array.
 	 *
 	 * @return array<string,mixed>
@@ -163,6 +174,15 @@ final class SettingsService {
 	 */
 	private function normalizeUsername( $value ): string {
 		return is_string( $value ) ? trim( sanitize_text_field( $value ) ) : '';
+	}
+
+	/**
+	 * Validates and normalizes the detail slug.
+	 *
+	 * @param mixed $value Submitted value.
+	 */
+	private function normalizeDetailSlug( $value ): string {
+		return is_string( $value ) ? trim( sanitize_title( $value ) ) : '';
 	}
 
 	/**
@@ -264,7 +284,6 @@ final class SettingsService {
 
 		$this->requireCrypto();
 
-		try {
 			$iv_length = openssl_cipher_iv_length( self::CIPHER );
 			if ( false === $iv_length || $iv_length < 1 ) {
 				throw new RuntimeException( self::SAFE_ERROR );
@@ -287,9 +306,6 @@ final class SettingsService {
 			$mac           = $this->hmac( $authenticated, $keys['authentication'] );
 
 			return base64_encode( $authenticated . $mac );
-		} catch ( Throwable $exception ) {
-			throw new RuntimeException( self::SAFE_ERROR );
-		}
 	}
 
 	/**
