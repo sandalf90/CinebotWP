@@ -1,7 +1,6 @@
 parameters:
     level: 6
     phpVersion: 70400
-    memory_limit: 512M
     paths:
         - cinebot-wp.php
         - includes
