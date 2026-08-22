@@ -146,7 +146,7 @@ final class ApiPage {
 	public function testConnection(): void {
 		if ( ! check_ajax_referer( 'cinebot_wp_admin', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
-			return; // @phpstan-ignore deadCode.unreachable (wp_send_json_error calls die() in production but returns in tests).
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		if ( ! current_user_can( $this->capability() ) ) {
