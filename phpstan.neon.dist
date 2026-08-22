@@ -1,7 +1,7 @@
+bootstrap: phpstan-bootstrap.php
 parameters:
     level: 6
     phpVersion: 70400
-    bootstrap: phpstan-bootstrap.php
     treatPhpDocTypesAsCertain: false
     paths:
         - cinebot-wp.php
