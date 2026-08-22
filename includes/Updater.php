@@ -43,4 +43,3 @@ final class Updater {
 		$checker->getVcsApi()->enableReleaseAssetsFilter();
 	}
 }
-

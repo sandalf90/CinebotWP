@@ -284,28 +284,28 @@ final class SettingsService {
 
 		$this->requireCrypto();
 
-			$iv_length = openssl_cipher_iv_length( self::CIPHER );
-			if ( false === $iv_length || $iv_length < 1 ) {
-				throw new RuntimeException( self::SAFE_ERROR );
-			}
+		$iv_length = openssl_cipher_iv_length( self::CIPHER );
+		if ( false === $iv_length || $iv_length < 1 ) {
+			throw new RuntimeException( self::SAFE_ERROR );
+		}
 
-			$iv         = random_bytes( $iv_length );
-			$keys       = $this->deriveKeys();
-			$ciphertext = openssl_encrypt(
-				$password,
-				self::CIPHER,
-				$keys['encryption'],
-				OPENSSL_RAW_DATA,
-				$iv
-			);
-			if ( false === $ciphertext || '' === $ciphertext ) {
-				throw new RuntimeException( self::SAFE_ERROR );
-			}
+		$iv         = random_bytes( $iv_length );
+		$keys       = $this->deriveKeys();
+		$ciphertext = openssl_encrypt(
+			$password,
+			self::CIPHER,
+			$keys['encryption'],
+			OPENSSL_RAW_DATA,
+			$iv
+		);
+		if ( false === $ciphertext || '' === $ciphertext ) {
+			throw new RuntimeException( self::SAFE_ERROR );
+		}
 
-			$authenticated = $iv . $ciphertext;
-			$mac           = $this->hmac( $authenticated, $keys['authentication'] );
+		$authenticated = $iv . $ciphertext;
+		$mac           = $this->hmac( $authenticated, $keys['authentication'] );
 
-			return base64_encode( $authenticated . $mac );
+		return base64_encode( $authenticated . $mac );
 	}
 
 	/**

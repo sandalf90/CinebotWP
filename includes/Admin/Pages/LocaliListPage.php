@@ -87,12 +87,12 @@ final class LocaliListPage {
 
 			public function column_default( $item, $column_name ) {
 				switch ( $column_name ) {
-					case 'codice':
-						return esc_html( $item->codice ?? '' );
-					case 'comune':
-						return esc_html( $item->comune ?? '' );
-					case 'provincia':
-						return esc_html( $item->provincia ?? '' );
+				case 'codice':
+					return esc_html( $item->codice ?? '' );
+				case 'comune':
+					return esc_html( $item->comune ?? '' );
+				case 'provincia':
+					return esc_html( $item->provincia ?? '' );
 				case 'eventi':
 					return (string) $this->events->countByLocaleId( (int) $item->id );
 					default:

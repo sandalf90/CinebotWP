@@ -489,12 +489,14 @@ final class TitoloEditPage {
 
 		foreach ( $events_data as $i => $entry ) {
 			$event = $entry['event'];
-			if ( '' === trim( $event->inizio ) ) {
-				$errors[] = sprintf( __( 'Event %d requires a start time.', 'cinebot-wp' ), $i + 1 );
-			}
-			if ( $event->localeId <= 0 ) {
-				$errors[] = sprintf( __( 'Event %d requires a venue.', 'cinebot-wp' ), $i + 1 );
-			}
+		if ( '' === trim( $event->inizio ) ) {
+			/* translators: %d: Event number. */
+			$errors[] = sprintf( __( 'Event %d requires a start time.', 'cinebot-wp' ), $i + 1 );
+		}
+		if ( $event->localeId <= 0 ) {
+			/* translators: %d: Event number. */
+			$errors[] = sprintf( __( 'Event %d requires a venue.', 'cinebot-wp' ), $i + 1 );
+		}
 
 		}
 
