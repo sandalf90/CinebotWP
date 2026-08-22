@@ -513,7 +513,7 @@ final class ShortcodeHandler {
 		$atts['show_desc']    = filter_var( $atts['show_desc'], FILTER_VALIDATE_BOOLEAN );
 
 		$atts['exclude_tipo']  = sanitize_text_field( $atts['exclude_tipo'] );
-		$atts['more_url']      = '' !== trim( $atts['more_url'] ) ? esc_url_raw( $atts['more_url'] ) : '';
+		$atts['more_url']      = '' !== trim( $atts['more_url'] ) ? $this->resolveRelativeUrl( $atts['more_url'] ) : '';
 		$atts['detail_url']    = '' !== trim( $atts['detail_url'] ) ? sanitize_text_field( $atts['detail_url'] ) : '';
 		$atts['detail_page_id'] = absint( $atts['detail_page_id'] );
 		$atts['more_label']    = sanitize_text_field( $atts['more_label'] );
@@ -528,6 +528,35 @@ final class ShortcodeHandler {
 		$atts['per_page'] = max( 1, min( 100, $atts['per_page'] ) );
 
 		return $atts;
+	}
+
+	/**
+	 * Resolve a relative URL through home_url(), honoring index.php permalink structures.
+	 *
+	 * Absolute URLs (http://, https://) are used as-is.
+	 *
+	 * @param string $url Raw URL from shortcode attributes.
+	 * @return string Resolved URL.
+	 */
+	private function resolveRelativeUrl( string $url ): string {
+		$url = trim( $url );
+		if ( '' === $url ) {
+			return '';
+		}
+
+		// Absolute URLs are used as-is.
+		if ( 0 === strpos( $url, 'http' ) ) {
+			return esc_url_raw( $url );
+		}
+
+		// Relative path: resolve through home_url() and honor index.php permalink structures.
+		$path      = '/' . ltrim( $url, '/' );
+		$structure = (string) get_option( 'permalink_structure', '' );
+		if ( 0 === strpos( $structure, '/index.php/' ) ) {
+			$path = '/index.php' . $path;
+		}
+
+		return home_url( $path );
 	}
 
 	/**
@@ -549,24 +578,7 @@ final class ShortcodeHandler {
 			return is_string( $permalink ) && '' !== $permalink ? $permalink : '';
 		}
 
-		$url = $atts['detail_url'];
-		if ( '' === $url ) {
-			return '';
-		}
-
-		// Absolute URLs are used as-is.
-		if ( 0 === strpos( $url, 'http' ) ) {
-			return $url;
-		}
-
-		// Relative path: resolve through home_url() and honor index.php permalink structures.
-		$path      = '/' . ltrim( $url, '/' );
-		$structure = (string) get_option( 'permalink_structure', '' );
-		if ( 0 === strpos( $structure, '/index.php/' ) ) {
-			$path = '/index.php' . $path;
-		}
-
-		return home_url( $path );
+		return '' !== $atts['detail_url'] ? $this->resolveRelativeUrl( $atts['detail_url'] ) : '';
 	}
 
 	/** Enqueue frontend CSS/JS with localized AJAX data. */
