@@ -163,9 +163,10 @@ final class ShortcodeHandler {
 
 		$resolved_detail_url = $this->resolveDetailUrl( $atts );
 
-		$cache_key = 'cinebot_prog_' . md5( wp_json_encode( $atts ) . $resolved_detail_url );
+		$cache_key = 'cinebot_prog_' . md5( wp_json_encode( $atts ) . $resolved_detail_url . $this->templateVersion() );
 		$cached = get_transient( $cache_key );
 		if ( false !== $cached ) {
+			$this->enqueueFrontendAssets();
 			return $cached;
 		}
 
@@ -203,22 +204,20 @@ final class ShortcodeHandler {
 	 * @return string HTML output.
 	 */
 	public function renderTitolo( $attributes = array() ): string {
-		if ( ! is_array( $attributes ) ) {
-			$attributes = array();
-		}
-		$id = isset( $attributes['id'] ) ? absint( $attributes['id'] ) : 0;
+		$id = $this->resolveDetailId( $attributes );
 		if ( $id <= 0 ) {
 			return '';
 		}
 
-		$title = $this->titles->find( $id );
-		if ( null === $title ) {
+		$detail = $this->getDetail( $id );
+		if ( null === $detail || null === $detail->title ) {
 			return '';
 		}
 
+		$this->enqueueFrontendAssets();
+
 		return $this->renderer->render( 'dettaglio-titolo', array(
-			'title'   => $title,
-			'events'  => null !== $this->events ? $this->events->findByTitoloId( $id ) : array(),
+			'detail' => $detail,
 		) );
 	}
 
@@ -553,18 +552,23 @@ final class ShortcodeHandler {
 
 	/** Enqueue frontend CSS/JS with localized AJAX data. */
 	private function enqueueFrontendAssets(): void {
+		$css_file = CINEBOT_WP_PATH . 'assets/css/cinebot-frontend.css';
+		$js_file  = CINEBOT_WP_PATH . 'assets/js/cinebot-frontend.js';
+		$css_ver  = file_exists( $css_file ) ? (string) filemtime( $css_file ) : CINEBOT_WP_VERSION;
+		$js_ver   = file_exists( $js_file ) ? (string) filemtime( $js_file ) : CINEBOT_WP_VERSION;
+
 		wp_enqueue_style(
 			'cinebot-frontend',
 			plugins_url( 'assets/css/cinebot-frontend.css', CINEBOT_WP_FILE ),
 			array(),
-			CINEBOT_WP_VERSION
+			$css_ver
 		);
 
 		wp_enqueue_script(
 			'cinebot-frontend',
 			plugins_url( 'assets/js/cinebot-frontend.js', CINEBOT_WP_FILE ),
 			array(),
-			CINEBOT_WP_VERSION,
+			$js_ver,
 			true
 		);
 
@@ -576,5 +580,27 @@ final class ShortcodeHandler {
 				'nonce'   => wp_create_nonce( 'cinebot_frontend' ),
 			)
 		);
+	}
+
+	/**
+	 * Return a version string based on template file modification times.
+	 *
+	 * When templates change, the transient cache key changes too,
+	 * so stale cached HTML is never served after a template edit.
+	 */
+	private function templateVersion(): string {
+		$files = array(
+			CINEBOT_WP_PATH . 'templates/programmazione-cards.php',
+			CINEBOT_WP_PATH . 'templates/titolo-card.php',
+			CINEBOT_WP_PATH . 'templates/titolo-card-list.php',
+			CINEBOT_WP_PATH . 'templates/dettaglio-titolo.php',
+		);
+		$ver = '';
+		foreach ( $files as $f ) {
+			if ( file_exists( $f ) ) {
+				$ver .= (string) filemtime( $f );
+			}
+		}
+		return $ver;
 	}
 }
