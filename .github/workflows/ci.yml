@@ -45,12 +45,12 @@ jobs:
       - name: Build artifact
         run: docker compose run --rm php composer build
 
-      - name: Verify ZIP contains vendor
+      - name: Verify ZIP contains autoload
         run: |
-          if docker compose run --rm php php -r "\$z=new ZipArchive(); \$z->open('dist/cinebot-wp.zip'); exit(\$z->locateName('cinebot-wp/vendor/autoload.php')===false?1:0);"; then
-            echo "ZIP contains vendor/autoload.php"
+          if docker compose run --rm php php -r "\$z=new ZipArchive(); \$z->open('dist/cinebot-wp.zip'); exit(\$z->locateName('cinebot-wp/includes/autoload.php')===false?1:0);"; then
+            echo "ZIP contains includes/autoload.php"
           else
-            echo "ERROR: ZIP is missing vendor/autoload.php"
+            echo "ERROR: ZIP is missing includes/autoload.php"
             exit 1
           fi
 
