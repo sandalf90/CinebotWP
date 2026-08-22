@@ -31,7 +31,7 @@ jobs:
         run: docker compose build
 
       - name: Install dependencies
-        run: docker compose run --rm php composer install
+        run: docker compose run --rm php composer install --prefer-dist
 
       - name: Lint (WPCS)
         run: docker compose run --rm php composer lint
