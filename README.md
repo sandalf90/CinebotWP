@@ -104,8 +104,6 @@ The plugin checks for updates from GitHub Releases automatically. The repository
 
 When a new release is published on GitHub, the plugin will show an update notification in the WordPress admin. Simply click "Update Now" to install the latest version.
 
-> **Private repositories:** If you fork this plugin to a private repo, a GitHub Personal Access Token (scope: `repo`) is required. Navigate to **Cinebot → API** and enter the token in the **GitHub Token** field.
-
 ## Versioning
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) and [release-please](https://github.com/googleapis/release-please) for automated versioning:

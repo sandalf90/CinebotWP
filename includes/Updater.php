@@ -7,8 +7,6 @@
 
 namespace CinebotWp;
 
-use CinebotWp\Services\SettingsService;
-
 /**
  * Initialises the plugin-update-checker library to poll GitHub Releases
  * for new versions of the plugin.
@@ -42,10 +40,6 @@ final class Updater {
 		);
 
 		$checker->getVcsApi()->enableReleaseAssetsFilter();
-
-		$token = ( new SettingsService() )->githubToken();
-		if ( '' !== $token ) {
-			$checker->getVcsApi()->setAuthentication( $token );
-		}
 	}
 }
+
