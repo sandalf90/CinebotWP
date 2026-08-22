@@ -8,4 +8,4 @@ parameters:
         - uninstall.php
     excludePaths:
         - vendor
-        - dist
+        - dist (?)
