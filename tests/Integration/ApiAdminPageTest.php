@@ -123,7 +123,7 @@ final class ApiAdminPageTest extends WP_UnitTestCase {
 			$this->api_page,
 			$this->titoli_page,
 			$this->edit_page,
-			new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->titles, $this->events ),
+			new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->events ),
 			new \CinebotWp\Admin\Pages\LocaleEditPage( $this->venues ),
 			new \CinebotWp\Admin\Pages\TipologieListPage( $this->types ),
 			new \CinebotWp\Admin\Pages\TipologiaEditPage( $this->types ),

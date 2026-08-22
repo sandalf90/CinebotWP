@@ -435,7 +435,7 @@ final class TitoloEditPageTest extends WP_UnitTestCase {
 		$dashboard = new DashboardPage( $settings, $this->titles, $log_repo );
 		$api_page  = new ApiPage( $settings, $scheduler, $sync );
 
-		$locali_page = new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->titles, $this->events );
+		$locali_page = new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->events );
 		$locale_edit = new \CinebotWp\Admin\Pages\LocaleEditPage( $this->venues );
 		$tipologie_page = new \CinebotWp\Admin\Pages\TipologieListPage( $this->types );
 		$tipologia_edit = new \CinebotWp\Admin\Pages\TipologiaEditPage( $this->types );

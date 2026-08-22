@@ -104,6 +104,7 @@ final class ShortcodeHandler {
 	public function ajaxFilter(): void {
 		if ( ! check_ajax_referer( 'cinebot_frontend', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		$atts = $this->normalizeAttributes( array(
@@ -130,6 +131,7 @@ final class ShortcodeHandler {
 			'total'    => $total,
 			'has_more' => ( $atts['offset'] + count( $cards ) ) < $total,
 		) );
+		return; // @phpstan-ignore deadCode.unreachable
 	}
 
 	/**

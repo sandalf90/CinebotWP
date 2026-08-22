@@ -146,10 +146,12 @@ final class ApiPage {
 	public function testConnection(): void {
 		if ( ! check_ajax_referer( 'cinebot_wp_admin', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
+			return; // @phpstan-ignore deadCode.unreachable (wp_send_json_error calls die() in production but returns in tests).
 		}
 
 		if ( ! current_user_can( $this->capability() ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'cinebot-wp' ) ), 403 );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		try {
@@ -164,14 +166,17 @@ final class ApiPage {
 			wp_send_json_success( array(
 				'titoli_count' => $titoli,
 			) );
+			return; // @phpstan-ignore deadCode.unreachable
 		} catch ( ApiException $e ) {
 			wp_send_json_error( array(
 				'message' => $e->getMessage(),
 			) );
+			return; // @phpstan-ignore deadCode.unreachable
 		} catch ( Throwable $e ) {
 			wp_send_json_error( array(
 				'message' => __( 'Unable to connect to the Cinebot API.', 'cinebot-wp' ),
 			) );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 	}
 
@@ -179,10 +184,12 @@ final class ApiPage {
 	public function syncNow(): void {
 		if ( ! check_ajax_referer( 'cinebot_wp_admin', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		if ( ! current_user_can( $this->capability() ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'cinebot-wp' ) ), 403 );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		$result = $this->sync->sync();
@@ -192,11 +199,13 @@ final class ApiPage {
 				'stats'   => $result->stats(),
 				'message' => $result->message(),
 			) );
+			return; // @phpstan-ignore deadCode.unreachable
 		}
 
 		wp_send_json_error( array(
 			'message' => $result->message(),
 		) );
+		return; // @phpstan-ignore deadCode.unreachable
 	}
 
 	/** Return the filtered admin capability. */

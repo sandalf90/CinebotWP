@@ -307,7 +307,7 @@ final class TitoliListPageTest extends WP_UnitTestCase {
 			$this->types,
 			$this->venues
 		);
-		$locali_page = new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->titles, $this->events );
+		$locali_page = new \CinebotWp\Admin\Pages\LocaliListPage( $this->venues, $this->events );
 		$locale_edit = new \CinebotWp\Admin\Pages\LocaleEditPage( $this->venues );
 		$tipologie_page = new \CinebotWp\Admin\Pages\TipologieListPage( $this->types );
 		$tipologia_edit = new \CinebotWp\Admin\Pages\TipologiaEditPage( $this->types );
