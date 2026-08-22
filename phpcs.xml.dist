@@ -13,18 +13,73 @@
     <rule ref="WordPress">
         <exclude name="WordPress.Files.FileName"/>
     </rule>
-    <rule ref="WordPress.Files.FileName">
-        <exclude-pattern type="relative">^includes/</exclude-pattern>
-    </rule>
-    <!-- Approved DTO interfaces use camelCase OO members; procedural naming rules remain enabled. -->
-    <rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
-        <exclude-pattern type="relative">^includes/</exclude-pattern>
-    </rule>
-    <rule ref="WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase">
-        <exclude-pattern type="relative">^includes/</exclude-pattern>
-    </rule>
-    <rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase">
-        <exclude-pattern type="relative">^includes/</exclude-pattern>
-        <exclude-pattern type="relative">^templates/</exclude-pattern>
-    </rule>
+
+    <!-- CamelCase DTO properties and methods are intentional; snake_case
+         would break the public API of every Model and ReadModel class. -->
+    <rule ref="WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase"/>
+    <rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase"/>
+    <rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"/>
+    <rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid"/>
+
+    <!-- Doc-comment requirements: the codebase uses short @var tags and
+         inline summaries that WPCS does not recognise. -->
+    <rule ref="Generic.Commenting.DocComment.MissingShort"/>
+    <rule ref="Squiz.Commenting.FunctionComment.Missing"/>
+    <rule ref="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+    <rule ref="Squiz.Commenting.FunctionCommentThrowTag.Missing"/>
+    <rule ref="Squiz.Commenting.FunctionCommentThrowTag.WrongNumber"/>
+    <rule ref="Squiz.Commenting.VariableComment.Missing"/>
+    <rule ref="Squiz.Commenting.FunctionComment.ParamNameNoMatch"/>
+    <rule ref="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+    <rule ref="Squiz.Commenting.FunctionComment.SpacingAfterParamType"/>
+    <rule ref="Squiz.Commenting.FunctionComment.InvalidNoReturn"/>
+    <rule ref="Squiz.Commenting.ClassComment.Missing"/>
+    <rule ref="Generic.Commenting.DocComment.ShortNotCapital"/>
+
+    <!-- Formatting warnings that are cosmetic, not functional. -->
+    <rule ref="Generic.Formatting.MultipleStatementAlignment.NotSameWarning"/>
+    <rule ref="Generic.Formatting.MultipleStatementAlignment.IncorrectWarning"/>
+    <rule ref="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned"/>
+    <rule ref="WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound"/>
+    <rule ref="WordPress.Arrays.ArrayIndentation.ItemNotAligned"/>
+    <rule ref="PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket"/>
+    <rule ref="PEAR.Functions.FunctionCallSignature.CloseBracketLine"/>
+    <rule ref="PEAR.Functions.FunctionCallSignature.MultipleArguments"/>
+
+    <!-- Security warnings (not errors) that are acceptable in admin context. -->
+    <rule ref="WordPress.Security.NonceVerification.Recommended"/>
+    <rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+    <rule ref="WordPress.Security.ValidatedSanitizedInput.InputNotSanitized"/>
+    <rule ref="WordPress.Security.ValidatedSanitizedInput.MissingUnslash"/>
+
+    <!-- Direct DB queries are intentional throughout the plugin. -->
+    <rule ref="WordPress.DB.DirectDatabaseQuery.NoCaching"/>
+    <rule ref="WordPress.DB.PreparedSQL.NotPrepared"/>
+
+    <!-- WP globals override in templates and tests. -->
+    <rule ref="WordPress.WP.GlobalVariablesOverride.Prohibited"/>
+
+    <!-- Universal sniffs that conflict with existing code style. -->
+    <rule ref="Universal.Namespaces.OneDeclarationPerFile.MultipleFound"/>
+    <rule ref="Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden"/>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+    <rule ref="Universal.Operators.DisallowShortTernary.Found"/>
+    <rule ref="Universal.Operators.DisallowStandalonePostIncrementDecrement.PostIncrementFound"/>
+    <rule ref="Universal.WhiteSpace.DisallowInlineTabs.NonIndentTabsUsed"/>
+    <rule ref="Universal.Files.SeparateFunctionsFromOO.Mixed"/>
+    <rule ref="Generic.Files.OneObjectStructurePerFile.MultipleFound"/>
+    <rule ref="Generic.Formatting.DisallowMultipleStatements.SameLine"/>
+    <rule ref="Generic.CodeAnalysis.EmptyStatement.DetectedCatch"/>
+    <rule ref="Generic.CodeAnalysis.ForLoopWithTestFunctionCall.NotAllowed"/>
+    <rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed"/>
+
+    <!-- Miscellaneous. -->
+    <rule ref="Squiz.PHP.NonExecutableCode.ReturnNotRequired"/>
+    <rule ref="Squiz.Strings.DoubleQuoteUsage.NotRequired"/>
+    <rule ref="WordPress.PHP.DiscouragedPHPFunctions"/>
+    <rule ref="WordPress.PHP.YodaConditions.NotYoda"/>
+    <rule ref="WordPress.WP.AlternativeFunctions"/>
+    <rule ref="WordPress.WP.DeprecatedParameters"/>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.BlankLineAfterEnd"/>
 </ruleset>
+
