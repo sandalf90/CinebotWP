@@ -7,6 +7,9 @@
 
 namespace CinebotWp\Tests\Integration;
 
+// Fixtures use trusted, fixed plugin table identifiers.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 use CinebotWp\Frontend\ShortcodeHandler;
 use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Repositories\EventoRepository;
@@ -266,3 +269,5 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 		return $title_id;
 	}
 }
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared

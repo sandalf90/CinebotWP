@@ -7,6 +7,9 @@
 
 namespace CinebotWp\Tests\Integration;
 
+// Fixtures use trusted, fixed plugin table identifiers.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 use CinebotWp\Admin\Pages\DashboardPage;
 use CinebotWp\Admin\Pages\SyncLogPage;
 use CinebotWp\Repositories\SyncLogRepository;
@@ -227,3 +230,5 @@ final class MonitoringAdminPagesTest extends WP_UnitTestCase {
 		$this->log_page->deleteOld();
 	}
 }
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared

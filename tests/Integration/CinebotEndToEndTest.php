@@ -7,6 +7,9 @@
 
 namespace CinebotWp\Tests\Integration;
 
+// Fixtures use trusted, fixed plugin table identifiers.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 use CinebotWp\Frontend\ShortcodeHandler;
 use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Plugin;
@@ -298,3 +301,5 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 		return (array) json_decode( $json, true );
 	}
 }
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared

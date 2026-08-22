@@ -7,6 +7,9 @@
 
 namespace CinebotWp\Tests\Integration;
 
+// Fixtures use trusted, fixed plugin table identifiers.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 use CinebotWp\Admin\Pages\DashboardPage;
 use CinebotWp\Database\SchemaInstaller;
 use CinebotWp\Frontend\ShortcodeHandler;
@@ -365,3 +368,5 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		return $title_id;
 	}
 }
+
+// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
