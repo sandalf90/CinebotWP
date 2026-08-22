@@ -21,35 +21,72 @@ use CinebotWp\Admin\Pages\TitoliListPage;
  * Registers the Cinebot admin menu and page routes.
  */
 final class AdminMenu {
-	/** @var DashboardPage */
+	/** Dashboard page instance.
+	 *
+	 * @var DashboardPage
+	 */
 	private $dashboard;
 
-	/** @var ApiPage */
+	/** API settings page instance.
+	 *
+	 * @var ApiPage
+	 */
 	private $api_page;
 
-	/** @var TitoliListPage */
+	/** Titles list page instance.
+	 *
+	 * @var TitoliListPage
+	 */
 	private $titoli_page;
 
-	/** @var TitoloEditPage */
+	/** Title edit page instance.
+	 *
+	 * @var TitoloEditPage
+	 */
 	private $edit_page;
 
-	/** @var LocaliListPage */
+	/** Venues list page instance.
+	 *
+	 * @var LocaliListPage
+	 */
 	private $locali_page;
 
-	/** @var LocaleEditPage */
+	/** Venue edit page instance.
+	 *
+	 * @var LocaleEditPage
+	 */
 	private $locale_edit;
 
-	/** @var TipologieListPage */
+	/** Event types list page instance.
+	 *
+	 * @var TipologieListPage
+	 */
 	private $tipologie_page;
 
-	/** @var TipologiaEditPage */
+	/** Event type edit page instance.
+	 *
+	 * @var TipologiaEditPage
+	 */
 	private $tipologia_edit;
 
-	/** @var SyncLogPage */
+	/** Sync log page instance.
+	 *
+	 * @var SyncLogPage
+	 */
 	private $log_page;
 
 	/**
 	 * Store the page collaborators.
+	 *
+	 * @param DashboardPage      $dashboard      Dashboard page.
+	 * @param ApiPage            $api_page       API settings page.
+	 * @param TitoliListPage     $titoli_page    Titles list page.
+	 * @param TitoloEditPage     $edit_page      Title edit page.
+	 * @param LocaliListPage     $locali_page    Venues list page.
+	 * @param LocaleEditPage     $locale_edit    Venue edit page.
+	 * @param TipologieListPage  $tipologie_page Event types list page.
+	 * @param TipologiaEditPage  $tipologia_edit Event type edit page.
+	 * @param SyncLogPage        $log_page       Sync log page.
 	 */
 	public function __construct(
 		DashboardPage $dashboard,

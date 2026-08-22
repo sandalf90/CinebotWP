@@ -14,6 +14,12 @@
 
 namespace CinebotWp\Frontend;
 
+/**
+ * Intercept wp_send_json in the Frontend namespace to prevent die during tests.
+ *
+ * @param mixed $response    Response data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json( $response, $status_code = null ) {
 	if ( ! headers_sent() ) {
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
@@ -24,6 +30,12 @@ function wp_send_json( $response, $status_code = null ) {
 	echo wp_json_encode( $response );
 }
 
+/**
+ * Intercept wp_send_json_success in the Frontend namespace.
+ *
+ * @param mixed $data        Optional response data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json_success( $data = null, $status_code = null ) {
 	$response = array( 'success' => true );
 	if ( isset( $data ) ) {
@@ -32,6 +44,12 @@ function wp_send_json_success( $data = null, $status_code = null ) {
 	wp_send_json( $response, $status_code );
 }
 
+/**
+ * Intercept wp_send_json_error in the Frontend namespace.
+ *
+ * @param mixed $data        Optional error data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json_error( $data = null, $status_code = null ) {
 	$response = array( 'success' => false );
 	if ( isset( $data ) ) {
@@ -40,8 +58,15 @@ function wp_send_json_error( $data = null, $status_code = null ) {
 	wp_send_json( $response, $status_code );
 }
 
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound -- intentional: same helpers needed in Admin\Pages namespace.
 namespace CinebotWp\Admin\Pages;
 
+/**
+ * Intercept wp_send_json in the Admin\Pages namespace to prevent die during tests.
+ *
+ * @param mixed $response    Response data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json( $response, $status_code = null ) {
 	if ( ! headers_sent() ) {
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
@@ -52,6 +77,12 @@ function wp_send_json( $response, $status_code = null ) {
 	echo wp_json_encode( $response );
 }
 
+/**
+ * Intercept wp_send_json_success in the Admin\Pages namespace.
+ *
+ * @param mixed $data        Optional response data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json_success( $data = null, $status_code = null ) {
 	$response = array( 'success' => true );
 	if ( isset( $data ) ) {
@@ -60,6 +91,12 @@ function wp_send_json_success( $data = null, $status_code = null ) {
 	wp_send_json( $response, $status_code );
 }
 
+/**
+ * Intercept wp_send_json_error in the Admin\Pages namespace.
+ *
+ * @param mixed $data        Optional error data.
+ * @param int   $status_code Optional HTTP status code.
+ */
 function wp_send_json_error( $data = null, $status_code = null ) {
 	$response = array( 'success' => false );
 	if ( isset( $data ) ) {

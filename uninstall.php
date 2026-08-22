@@ -49,7 +49,7 @@ $table_suffixes = array(
 	'tipologie_eventi',
 	'sync_log',
 );
-$tables      = array_map(
+$tables        = array_map(
 	static function ( string $table_suffix ) use ( $wpdb ): string {
 		return $wpdb->prefix . 'cinebot_' . $table_suffix;
 	},
