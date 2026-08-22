@@ -49,7 +49,7 @@ final class ReferenceAdminPagesTest extends WP_UnitTestCase {
 	public function test_locali_list_renders(): void {
 		wp_set_current_user( 1 );
 
-		$page = new LocaliListPage( $this->venues, $this->titles, $this->events );
+		$page = new LocaliListPage( $this->venues, $this->events );
 
 		ob_start();
 		$page->render();

@@ -155,7 +155,7 @@ final class Plugin {
 			$locale_repo
 		);
 
-		$locali_page = new LocaliListPage( $locale_repo, $titoli_repo, $evento_repo );
+		$locali_page = new LocaliListPage( $locale_repo, $evento_repo );
 		$locale_edit = new LocaleEditPage( $locale_repo );
 		$tipologie_page = new TipologieListPage( $tipo_repo );
 		$tipologia_edit = new TipologiaEditPage( $tipo_repo );
@@ -184,7 +184,6 @@ final class Plugin {
 		return new ShortcodeHandler(
 			new TitoloRepository( $wpdb ),
 			new TemplateRenderer(),
-			new EventoRepository( $wpdb ),
 			new SettingsService(),
 			new LocaleRepository( $wpdb )
 		);

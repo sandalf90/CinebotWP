@@ -87,7 +87,7 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 		self::assertGreaterThan( 0, $stats['eventi_totali'], 'Dashboard should show imported events' );
 
 		// 5. Render shortcode with data.
-		$handler = new ShortcodeHandler( $titles, new TemplateRenderer(), new EventoRepository( $wpdb ) );
+		$handler = new ShortcodeHandler( $titles, new TemplateRenderer() );
 		$handler->register();
 
 		$html = do_shortcode( '[cinebot_programmazione tipo="45" comune="Bassano del Grappa"]' );
@@ -240,8 +240,7 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 
 		$handler = new ShortcodeHandler(
 			new TitoloRepository( $wpdb ),
-			new TemplateRenderer(),
-			new EventoRepository( $wpdb )
+			new TemplateRenderer()
 		);
 		$handler->register();
 

@@ -18,18 +18,14 @@ final class LocaliListPage {
 	/** @var LocaleRepository */
 	private $venues;
 
-	/** @var TitoloRepository */
-	private $titles;
-
 	/** @var EventoRepository */
 	private $events;
 
 	/**
 	 * Store repository collaborators.
 	 */
-	public function __construct( LocaleRepository $venues, TitoloRepository $titles, EventoRepository $events ) {
+	public function __construct( LocaleRepository $venues, EventoRepository $events ) {
 		$this->venues = $venues;
-		$this->titles = $titles;
 		$this->events = $events;
 	}
 

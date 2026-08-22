@@ -38,7 +38,7 @@ final class ShortcodeHandler {
 	/**
 	 * Store repository and renderer collaborators.
 	 */
-	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?EventoRepository $events = null, ?SettingsService $settings = null, ?LocaleRepository $locales = null ) {
+	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?SettingsService $settings = null, ?LocaleRepository $locales = null ) {
 		$this->titles   = $titles;
 		$this->renderer = $renderer;
 		$this->settings = $settings;

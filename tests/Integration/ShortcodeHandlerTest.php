@@ -41,8 +41,7 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		$this->events = new EventoRepository( $wpdb );
 		$this->handler = new ShortcodeHandler(
 			$this->titles,
-			new TemplateRenderer(),
-			$this->events
+			new TemplateRenderer()
 		);
 		$this->handler->register();
 		delete_transient( 'cinebot_prog_' . md5( wp_json_encode( array() ) ) );

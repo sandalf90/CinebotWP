@@ -36,8 +36,7 @@ final class FrontendAjaxTest extends WP_UnitTestCase {
 		$this->titles = new TitoloRepository( $wpdb );
 		$this->handler = new ShortcodeHandler(
 			$this->titles,
-			new TemplateRenderer(),
-			new EventoRepository( $wpdb )
+			new TemplateRenderer()
 		);
 		$this->handler->register();
 	}

@@ -246,7 +246,7 @@ final class TitoloEditPage {
 				<tr>
 					<th scope="row"><label for="cinebot-tag"><?php esc_html_e( 'Tag', 'cinebot-wp' ); ?></label></th>
 					<td>
-						<input type="text" id="cinebot-tag" name="tag" value="<?php echo esc_attr( implode( ', ', is_array( $title->tag ) ? $title->tag : array() ) ); ?>" class="regular-text" />
+						<input type="text" id="cinebot-tag" name="tag" value="<?php echo esc_attr( implode( ', ', $title->tag ) ); ?>" class="regular-text" />
 						<p class="description"><?php esc_html_e( 'Comma-separated tags.', 'cinebot-wp' ); ?></p>
 					</td>
 				</tr>
