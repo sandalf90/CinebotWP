@@ -4,6 +4,9 @@
          failOnRisky="true"
          failOnWarning="true"
          beStrictAboutOutputDuringTests="true">
+    <php>
+        <ini name="error_reporting" value="E_ALL &amp; ~E_DEPRECATED" />
+    </php>
     <testsuites>
         <testsuite name="unit">
             <directory suffix="Test.php">tests/Unit</directory>
