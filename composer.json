@@ -39,7 +39,7 @@
     "test:integration": "bash docker/run-tests.sh integration",
     "lint": "phpcs --standard=phpcs.xml.dist",
     "lint:fix": "phpcbf --standard=phpcs.xml.dist",
-    "analyse": "phpstan analyse -c phpstan.neon.dist --no-progress --memory-limit=512M",
+    "analyse": "phpstan analyse -c phpstan.neon.dist --no-progress --memory-limit=1G",
     "build": "php tools/build.php",
     "check": ["@lint", "@analyse", "@test", "@build"]
   }
