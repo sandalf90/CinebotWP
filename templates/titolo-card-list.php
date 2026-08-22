@@ -53,7 +53,7 @@ $giorni_it = array( 'Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì',
 		?>
 		<article class="cinebot-card" data-event-id="<?php echo esc_attr( (string) $card->eventoId ); ?>">
 			<?php if ( $card_link ) : ?>
-				<a href="<?php echo $card_link; ?>" class="cinebot-card-link">
+				<a href="<?php echo esc_url( $card_link ); ?>" class="cinebot-card-link">
 			<?php endif; ?>
 				<?php if ( $card->locandinaUrl ) : ?>
 					<div class="cinebot-card-locandina">

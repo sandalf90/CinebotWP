@@ -26,6 +26,7 @@ final class Updater {
 			if ( ! is_file( $autoload ) ) {
 				return;
 			}
+			// phpcs:ignore WordPress.Files.DirectFileAccess -- trusted vendor autoloader, mirrors WP core require.
 			require $autoload;
 		}
 

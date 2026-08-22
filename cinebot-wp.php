@@ -12,6 +12,7 @@
  */
 
 use CinebotWp\Plugin;
+use CinebotWp\Updater;
 
 define( 'CINEBOT_WP_VERSION', '1.0.0' );
 define( 'CINEBOT_WP_FILE', __FILE__ );
