@@ -21,11 +21,6 @@ define( 'CINEBOT_WP_URL', plugin_dir_url( __FILE__ ) );
 
 require CINEBOT_WP_PATH . 'includes/autoload.php';
 
-$vendor_autoload = CINEBOT_WP_PATH . 'vendor/autoload.php';
-if ( is_file( $vendor_autoload ) ) {
-	require $vendor_autoload;
-}
-
 register_activation_hook( CINEBOT_WP_FILE, array( Plugin::class, 'activate' ) );
 register_deactivation_hook( CINEBOT_WP_FILE, array( Plugin::class, 'deactivate' ) );
 

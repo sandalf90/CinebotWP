@@ -108,13 +108,16 @@ final class ShortcodeHandler {
 		}
 
 		$atts = $this->normalizeAttributes( array(
-			'from'    => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
-			'to'      => isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '',
-			'locale'  => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
-			'limit'   => isset( $_POST['limit'] ) ? absint( $_POST['limit'] ) : 50,
-			'offset'  => isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0,
-			'order'   => isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'ASC',
-			'orderby' => isset( $_POST['orderby'] ) ? sanitize_text_field( wp_unslash( $_POST['orderby'] ) ) : 'inizio',
+			'from'         => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
+			'to'           => isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '',
+			'tipo'         => isset( $_POST['tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo'] ) ) : '',
+			'exclude_tipo' => isset( $_POST['exclude_tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['exclude_tipo'] ) ) : '',
+			'comune'       => isset( $_POST['comune'] ) ? sanitize_text_field( wp_unslash( $_POST['comune'] ) ) : '',
+			'locale'       => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
+			'limit'        => isset( $_POST['limit'] ) ? absint( $_POST['limit'] ) : 50,
+			'offset'       => isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0,
+			'order'        => isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'ASC',
+			'orderby'      => isset( $_POST['orderby'] ) ? sanitize_text_field( wp_unslash( $_POST['orderby'] ) ) : 'inizio',
 		) );
 
 		$cards = $this->titles->findPublicSchedule( $atts );
@@ -509,7 +512,7 @@ final class ShortcodeHandler {
 		$atts['show_desc']    = filter_var( $atts['show_desc'], FILTER_VALIDATE_BOOLEAN );
 
 		$atts['exclude_tipo']  = sanitize_text_field( $atts['exclude_tipo'] );
-		$atts['more_url']      = '' !== trim( $atts['more_url'] ) ? $this->resolveRelativeUrl( $atts['more_url'] ) : '';
+		$atts['more_url']      = '' !== trim( $atts['more_url'] ) ? sanitize_text_field( trim( $atts['more_url'] ) ) : '';
 		$atts['detail_url']    = '' !== trim( $atts['detail_url'] ) ? sanitize_text_field( $atts['detail_url'] ) : '';
 		$atts['detail_page_id'] = absint( $atts['detail_page_id'] );
 		$atts['more_label']    = sanitize_text_field( $atts['more_label'] );

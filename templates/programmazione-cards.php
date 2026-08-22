@@ -31,6 +31,14 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 				<input type="date" name="to" value="<?php echo esc_attr( $atts['to'] ); ?>" />
 			</label>
 			<label>
+				<?php esc_html_e( 'Tipo:', 'cinebot-wp' ); ?>
+				<input type="text" name="tipo" value="<?php echo esc_attr( $atts['tipo'] ); ?>" />
+			</label>
+			<label>
+				<?php esc_html_e( 'Comune:', 'cinebot-wp' ); ?>
+				<input type="text" name="comune" value="<?php echo esc_attr( $atts['comune'] ); ?>" />
+			</label>
+			<label>
 				<?php esc_html_e( 'Locale:', 'cinebot-wp' ); ?>
 				<select name="locale">
 					<option value="0"><?php esc_html_e( 'Tutti', 'cinebot-wp' ); ?></option>

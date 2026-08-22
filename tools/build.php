@@ -15,7 +15,6 @@ $runtime      = array(
 	'assets',
 	'templates',
 	'languages',
-	'vendor',
 	'README.md',
 	'LICENSE',
 );
