@@ -39,22 +39,19 @@ final class LocaliListPage {
 
 		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
-		$table = new class( $this->venues, $this->titles, $this->events ) extends \WP_List_Table {
+		$table = new class( $this->venues, $this->events ) extends \WP_List_Table {
 			/** @var LocaleRepository */
 			private $venues;
-			/** @var TitoloRepository */
-			private $titles;
 			/** @var EventoRepository */
 			private $events;
 
-			public function __construct( LocaleRepository $venues, TitoloRepository $titles, EventoRepository $events ) {
+			public function __construct( LocaleRepository $venues, EventoRepository $events ) {
 				parent::__construct( array(
 					'singular' => 'locale',
 					'plural'   => 'locali',
 					'screen'   => 'cinebot-wp-locali',
 				) );
 				$this->venues = $venues;
-				$this->titles = $titles;
 				$this->events = $events;
 			}
 
@@ -76,15 +73,18 @@ final class LocaliListPage {
 				);
 			}
 
+			/** @param object $item */
 			public function column_cb( $item ) {
 				return sprintf( '<input type="checkbox" name="locale[]" value="%d" />', (int) $item->id );
 			}
 
+			/** @param object $item */
 			public function column_nome( $item ) {
 				$edit_url = admin_url( 'admin.php?page=cinebot-wp-locale-edit&id=' . (int) $item->id );
 				return sprintf( '<a href="%s">%s</a>', esc_url( $edit_url ), esc_html( $item->nome ) );
 			}
 
+			/** @param object $item */
 			public function column_default( $item, $column_name ) {
 				switch ( $column_name ) {
 				case 'codice':

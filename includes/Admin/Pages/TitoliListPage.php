@@ -127,7 +127,11 @@ final class TitoliListPage extends \WP_List_Table {
 		);
 	}
 
-	/** Render the bulk checkbox column. */
+	/**
+	 * Render the bulk checkbox column.
+	 *
+	 * @param Titolo $item Title row.
+	 */
 	protected function column_cb( $item ): string {
 		return sprintf(
 			'<input type="checkbox" name="titolo[]" value="%d" />',

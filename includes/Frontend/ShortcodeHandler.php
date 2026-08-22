@@ -20,9 +20,6 @@ final class ShortcodeHandler {
 	/** @var TitoloRepository */
 	private $titles;
 
-	/** @var EventoRepository */
-	private $events;
-
 	/** @var SettingsService|null */
 	private $settings;
 
@@ -44,7 +41,6 @@ final class ShortcodeHandler {
 	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?EventoRepository $events = null, ?SettingsService $settings = null, ?LocaleRepository $locales = null ) {
 		$this->titles   = $titles;
 		$this->renderer = $renderer;
-		$this->events   = $events;
 		$this->settings = $settings;
 		$this->locales  = $locales;
 	}
@@ -108,7 +104,6 @@ final class ShortcodeHandler {
 	public function ajaxFilter(): void {
 		if ( ! check_ajax_referer( 'cinebot_frontend', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cinebot-wp' ) ), 403 );
-			return;
 		}
 
 		$atts = $this->normalizeAttributes( array(
@@ -135,7 +130,6 @@ final class ShortcodeHandler {
 			'total'    => $total,
 			'has_more' => ( $atts['offset'] + count( $cards ) ) < $total,
 		) );
-		return;
 	}
 
 	/**
@@ -382,7 +376,7 @@ final class ShortcodeHandler {
 			return '';
 		}
 		if ( null === $max || $min === $max ) {
-			$price = null !== $min ? $min : $max;
+			$price = $min;
 			return '€ ' . esc_html( $this->formatPrezzo( (string) $price ) ) . ' + d.d.p.';
 		}
 		return 'Da € ' . esc_html( $this->formatPrezzo( (string) $min ) ) . ' a € ' . esc_html( $this->formatPrezzo( (string) $max ) ) . ' +d.d.p.';

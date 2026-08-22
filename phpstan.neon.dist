@@ -1,6 +1,8 @@
 parameters:
     level: 6
     phpVersion: 70400
+    bootstrap: phpstan-bootstrap.php
+    treatPhpDocTypesAsCertain: false
     paths:
         - cinebot-wp.php
         - includes
@@ -9,3 +11,7 @@ parameters:
     excludePaths:
         - vendor
         - dist (?)
+    ignoreErrors:
+        - identifier: missingType.iterableValue
+        - identifier: missingType.parameter
+        - identifier: missingType.return

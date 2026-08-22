@@ -103,7 +103,7 @@ final class DashboardPage {
 					<?php else : ?>
 						<?php foreach ( $recent as $log ) : ?>
 							<tr>
-								<td><?php echo esc_html( $log->startedAt ?? '—' ); ?></td>
+								<td><?php echo esc_html( $log->startedAt ); ?></td>
 								<td><?php echo esc_html( $log->status ?? '—' ); ?></td>
 								<td>+<?php echo esc_html( (string) $log->titoliAdded ); ?>/Δ<?php echo esc_html( (string) $log->titoliUpdated ); ?></td>
 								<td>+<?php echo esc_html( (string) $log->eventiAdded ); ?>/Δ<?php echo esc_html( (string) $log->eventiUpdated ); ?></td>

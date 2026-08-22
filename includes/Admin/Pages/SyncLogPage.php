@@ -62,6 +62,7 @@ final class SyncLogPage {
 				return array( 'started_at' => array( 'started_at', true ) );
 			}
 
+			/** @param object $item */
 			public function column_default( $item, $column_name ) {
 				switch ( $column_name ) {
 					case 'started_at':

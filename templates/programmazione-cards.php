@@ -13,6 +13,7 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 /** @var array $atts */
 /** @var string $detail_url */
 /** @var int $instance */
+/** @var \CinebotWp\Frontend\TemplateRenderer $this */
 /** @var int $current_page */
 /** @var int $total_pages */
 /** @var string $base_url */

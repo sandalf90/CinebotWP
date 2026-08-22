@@ -135,7 +135,7 @@ final class LocaleRepository {
 		$locale->cap            = $this->api_string( $data, 'cap' );
 		$locale->comune         = $this->api_string( $data, 'comune' );
 		$locale->provincia      = $this->api_string( $data, 'provincia' );
-		$locale->mappa          = isset( $data['mappa'] ) && null !== $data['mappa'] ? (int) $data['mappa'] : null;
+		$locale->mappa          = isset( $data['mappa'] ) ? (int) $data['mappa'] : null;
 		$locale->source         = 'api';
 
 		return $this->save( $locale );
@@ -244,7 +244,7 @@ final class LocaleRepository {
 	 * @param array<string,mixed> $data API venue data.
 	 */
 	private function api_string( array $data, string $key ): ?string {
-		if ( ! isset( $data[ $key ] ) || null === $data[ $key ] ) {
+		if ( ! isset( $data[ $key ] ) ) {
 			return null;
 		}
 

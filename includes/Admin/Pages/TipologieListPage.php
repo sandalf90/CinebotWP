@@ -35,22 +35,19 @@ final class TipologieListPage {
 		$cap        = $this->capability;
 		$toggle_url = admin_url( 'admin-post.php' );
 
-		$table = new class( $repo, $cap, $toggle_url ) extends \WP_List_Table {
+		$table = new class( $repo, $toggle_url ) extends \WP_List_Table {
 			/** @var TipologiaRepository */
 			private $types;
 			/** @var string */
-			private $cap;
-			/** @var string */
 			private $toggle_url;
 
-			public function __construct( TipologiaRepository $types, string $cap, string $toggle_url ) {
+			public function __construct( TipologiaRepository $types, string $toggle_url ) {
 				parent::__construct( array(
 					'singular' => 'tipologia',
 					'plural'   => 'tipologie',
 					'screen'   => 'cinebot-wp-tipologie',
 				) );
 				$this->types      = $types;
-				$this->cap         = $cap;
 				$this->toggle_url  = $toggle_url;
 			}
 
@@ -63,19 +60,23 @@ final class TipologieListPage {
 				);
 			}
 
+			/** @param object $item */
 			public function column_codice( $item ) {
 				$edit_url = admin_url( 'admin.php?page=cinebot-wp-tipologia-edit&id=' . (int) $item->id );
 				return sprintf( '<a href="%s">%s</a>', esc_url( $edit_url ), esc_html( $item->codice ) );
 			}
 
+			/** @param object $item */
 			public function column_descrizione( $item ) {
 				return esc_html( $item->descrizione );
 			}
 
+			/** @param object $item */
 			public function column_predefinito( $item ) {
 				return $item->predefinito ? '<span class="badge">' . esc_html__( 'Predefinito', 'cinebot-wp' ) . '</span>' : '&mdash;';
 			}
 
+			/** @param object $item */
 			public function column_attivo( $item ) {
 				$toggle_url = wp_nonce_url(
 					add_query_arg( array(

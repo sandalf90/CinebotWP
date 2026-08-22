@@ -36,7 +36,7 @@ final class CronScheduler {
 	public function register(): void {
 		add_filter( 'cron_schedules', array( $this, 'add_weekly_schedule' ) );
 		add_action( self::HOOK, array( $this, 'run_sync' ) );
-		add_action( 'update_option_cinebot_wp_settings', array( $this, 'reschedule' ), 10, 3 );
+		add_action( 'update_option_cinebot_wp_settings', array( $this, 'reschedule' ), 10, 2 );
 	}
 
 	/** Schedules the enabled synchronization frequency without duplicating events. */

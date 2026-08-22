@@ -74,7 +74,7 @@ $min = $effective_prezzo( $detail->prezzoDa, $detail->prevenditaDa );
 $max = $effective_prezzo( $detail->prezzoA, $detail->prevenditaA );
 if ( null !== $min || null !== $max ) {
 	if ( null === $max || $min === $max ) {
-		$price     = null !== $min ? $min : $max;
+		$price     = $min;
 		$prezzo_out = '€ ' . $format_prezzo( (string) $price ) . ' + d.d.p.';
 	} else {
 		$prezzo_out = 'Da € ' . $format_prezzo( (string) $min ) . ' a € ' . $format_prezzo( (string) $max ) . ' +d.d.p.';

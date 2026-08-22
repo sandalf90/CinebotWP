@@ -408,7 +408,7 @@ final class SettingsService {
 		$encoded = get_option( self::SALT_OPTION, null );
 		if ( null === $encoded ) {
 			$encoded = base64_encode( random_bytes( self::SALT_LENGTH ) );
-			if ( ! add_option( self::SALT_OPTION, $encoded, '', 'no' ) ) {
+			if ( ! add_option( self::SALT_OPTION, $encoded, '', false ) ) {
 				$encoded = get_option( self::SALT_OPTION, null );
 			}
 		}
