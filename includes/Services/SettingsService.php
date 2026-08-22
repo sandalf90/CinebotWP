@@ -38,7 +38,8 @@ final class SettingsService {
 	 *     sync_enabled:bool,
 	 *     api_base_url:string,
 	 *     detail_slug:string,
-	 *     has_password:bool
+	 *     has_password:bool,
+	 *     has_github_token:bool
 	 * }
 	 */
 	public function get(): array {
@@ -54,6 +55,9 @@ final class SettingsService {
 			'has_password'   => isset( $settings['api_password'] )
 				&& is_string( $settings['api_password'] )
 				&& '' !== $settings['api_password'],
+			'has_github_token' => isset( $settings['github_token'] )
+				&& is_string( $settings['github_token'] )
+				&& '' !== $settings['github_token'],
 		);
 	}
 
@@ -91,6 +95,17 @@ final class SettingsService {
 			&& '' !== $existing['api_password']
 		) {
 			$settings['api_password'] = $existing['api_password'];
+		}
+
+		$github_token = $input['github_token'] ?? '';
+		if ( is_string( $github_token ) && '' !== $github_token ) {
+			$settings['github_token'] = $this->encrypt( $github_token );
+		} elseif (
+			isset( $existing['github_token'] )
+			&& is_string( $existing['github_token'] )
+			&& '' !== $existing['github_token']
+		) {
+			$settings['github_token'] = $existing['github_token'];
 		}
 
 		update_option( self::SETTINGS_OPTION, $settings );
@@ -154,6 +169,22 @@ final class SettingsService {
 	 */
 	public function detailSlug(): string {
 		return $this->get()['detail_slug'];
+	}
+
+	/**
+	 * Decrypts and returns the GitHub token for the update checker.
+	 */
+	public function githubToken(): string {
+		$settings = $this->storedSettings();
+		if (
+			! isset( $settings['github_token'] )
+			|| ! is_string( $settings['github_token'] )
+			|| '' === $settings['github_token']
+		) {
+			return '';
+		}
+
+		return $this->decrypt( $settings['github_token'] );
 	}
 
 	/**

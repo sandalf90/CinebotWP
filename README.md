@@ -92,11 +92,33 @@ For custom detail page layouts, individual fields are available as separate shor
 ## Admin Sections
 
 1. **Dashboard** — sync status, counters, recent logs, quick links
-2. **API** — credentials, frontend ID, sync frequency, enable/disable cron, test connection, sync now
+2. **API** — credentials, frontend ID, sync frequency, enable/disable cron, test connection, sync now, GitHub token for updates
 3. **Programmazioni** — CRUD for titles with nested events/sectors/prices
 4. **Locali** — venue CRUD
 5. **Tipologie evento** — event type management (62 predefined + custom)
 6. **Log sincronizzazioni** — sync history with >30-day cleanup
+
+## Automatic Updates
+
+The plugin checks for updates from GitHub Releases automatically. For private repositories, a GitHub Personal Access Token (scope: `repo`) is required:
+
+1. Generate a token at [GitHub Settings → Tokens](https://github.com/settings/tokens)
+2. Navigate to **Cinebot → API** in WordPress admin
+3. Enter the token in the **GitHub Token** field
+4. Save settings
+
+When a new release is published on GitHub, the plugin will show an update notification in the WordPress admin dashboard.
+
+## Versioning
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) and [release-please](https://github.com/googleapis/release-please) for automated versioning:
+
+- `feat:` commits trigger a **minor** version bump
+- `fix:` commits trigger a **patch** version bump
+- `BREAKING CHANGE:` or `feat!:` triggers a **major** version bump
+- Other commit types (`chore:`, `docs:`, etc.) do not trigger a release
+
+When changes are merged to `main`, release-please automatically creates a release PR with the changelog and version bump. Merging that PR creates a Git tag and GitHub Release with the built ZIP attached.
 
 ## Development
 

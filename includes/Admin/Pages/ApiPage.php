@@ -81,15 +81,27 @@ final class ApiPage {
 							<p class="description"><?php esc_html_e( 'Optional numeric frontend identifier.', 'cinebot-wp' ); ?></p>
 						</td>
 					</tr>
-					<tr>
-						<th scope="row"><label for="cinebot_detail_slug"><?php esc_html_e( 'Detail Page Slug', 'cinebot-wp' ); ?></label></th>
-						<td>
-							<input type="text" id="cinebot_detail_slug" name="detail_slug"
-								value="<?php echo esc_attr( $settings['detail_slug'] ?? '' ); ?>"
-								class="regular-text" placeholder="es. spettacolo" />
-							<p class="description"><?php esc_html_e( 'Optional slug to enable pretty permalinks for event details (e.g., "spettacolo" for /spettacolo/15/title/).', 'cinebot-wp' ); ?></p>
-						</td>
-					</tr>
+				<tr>
+					<th scope="row"><label for="cinebot_detail_slug"><?php esc_html_e( 'Detail Page Slug', 'cinebot-wp' ); ?></label></th>
+					<td>
+						<input type="text" id="cinebot_detail_slug" name="detail_slug"
+							value="<?php echo esc_attr( $settings['detail_slug'] ?? '' ); ?>"
+							class="regular-text" placeholder="es. spettacolo" />
+						<p class="description"><?php esc_html_e( 'Optional slug to enable pretty permalinks for event details (e.g., "spettacolo" for /spettacolo/15/title/).', 'cinebot-wp' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="cinebot_github_token"><?php esc_html_e( 'GitHub Token', 'cinebot-wp' ); ?></label></th>
+					<td>
+						<input type="password" id="cinebot_github_token" name="github_token"
+							placeholder="<?php echo $settings['has_github_token'] ? esc_attr__( '•••••••• (leave blank to keep current)', 'cinebot-wp' ) : ''; ?>"
+							class="regular-text" autocomplete="new-password" />
+						<?php if ( $settings['has_github_token'] ) : ?>
+							<p class="description"><?php esc_html_e( 'A token is already stored. Leave blank to keep it.', 'cinebot-wp' ); ?></p>
+						<?php endif; ?>
+						<p class="description"><?php esc_html_e( 'Personal Access Token (scope: repo) for automatic plugin updates from GitHub Releases. Required for private repositories.', 'cinebot-wp' ); ?></p>
+					</td>
+				</tr>
 					<tr>
 						<th scope="row"><label for="cinebot_frequency"><?php esc_html_e( 'Sync frequency', 'cinebot-wp' ); ?></label></th>
 						<td>
