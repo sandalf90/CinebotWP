@@ -92,7 +92,7 @@ For custom detail page layouts, individual fields are available as separate shor
 ## Admin Sections
 
 1. **Dashboard** — sync status, counters, recent logs, quick links
-2. **API** — credentials, frontend ID, sync frequency, enable/disable cron, test connection, sync now, GitHub token for updates
+2. **API** — credentials, frontend ID, sync frequency, enable/disable cron, test connection, sync now
 3. **Programmazioni** — CRUD for titles with nested events/sectors/prices
 4. **Locali** — venue CRUD
 5. **Tipologie evento** — event type management (62 predefined + custom)
@@ -100,14 +100,11 @@ For custom detail page layouts, individual fields are available as separate shor
 
 ## Automatic Updates
 
-The plugin checks for updates from GitHub Releases automatically. For private repositories, a GitHub Personal Access Token (scope: `repo`) is required:
+The plugin checks for updates from GitHub Releases automatically. The repository is public, so no authentication is required — updates are detected and installed directly from the WordPress admin dashboard.
 
-1. Generate a token at [GitHub Settings → Tokens](https://github.com/settings/tokens)
-2. Navigate to **Cinebot → API** in WordPress admin
-3. Enter the token in the **GitHub Token** field
-4. Save settings
+When a new release is published on GitHub, the plugin will show an update notification in the WordPress admin. Simply click "Update Now" to install the latest version.
 
-When a new release is published on GitHub, the plugin will show an update notification in the WordPress admin dashboard.
+> **Private repositories:** If you fork this plugin to a private repo, a GitHub Personal Access Token (scope: `repo`) is required. Navigate to **Cinebot → API** and enter the token in the **GitHub Token** field.
 
 ## Versioning
 
