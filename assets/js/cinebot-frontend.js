@@ -15,12 +15,15 @@
 			if ( filters ) {
 				filters.addEventListener( 'submit', function ( e ) {
 					e.preventDefault();
-					var params = new URLSearchParams( new FormData( filters ) );
+					var formData = new FormData( filters );
+					var params = new URLSearchParams( formData );
 					params.append( 'action', 'cinebot_wp_filter' );
 					params.append( 'nonce', window.cinebotWpFrontend ? window.cinebotWpFrontend.nonce : '' );
 					params.append( 'instance', instance );
 					params.append( 'detail_url', detailUrl );
 					params.set( 'offset', '0' );
+
+					updateUrl( formData );
 
 					disableButtons( true );
 					fetch( window.cinebotWpFrontend.ajaxUrl, {
@@ -99,5 +102,17 @@
 	function disableButtons( disabled ) {
 		var btn = document.querySelector( '.cinebot-filters [type="submit"]' );
 		if ( btn ) { btn.disabled = disabled; }
+	}
+
+	function updateUrl( formData ) {
+		var url = new URLSearchParams();
+		formData.forEach( function ( val, key ) {
+			if ( val && '0' !== val ) {
+				url.set( key, val );
+			}
+		} );
+		var qs = url.toString();
+		var newUrl = window.location.pathname + ( qs ? '?' + qs : '' );
+		window.history.replaceState( null, '', newUrl );
 	}
 } )();

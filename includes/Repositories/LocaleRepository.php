@@ -142,6 +142,22 @@ final class LocaleRepository {
 	}
 
 	/**
+	 * Return all venues ordered by name.
+	 *
+	 * @return array<int,Locale>
+	 */
+	public function findAll(): array {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $this->db->get_results( "SELECT * FROM {$this->table} ORDER BY nome ASC, id ASC", ARRAY_A );
+		return array_map(
+			static function ( array $row ): Locale {
+				return Locale::fromArray( $row );
+			},
+			is_array( $rows ) ? $rows : array()
+		);
+	}
+
+	/**
 	 * Search venues using fixed predicates and ordering.
 	 *
 	 * @param array<string,mixed> $filters Supported provincia, comune, and search filters.

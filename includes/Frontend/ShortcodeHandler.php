@@ -9,6 +9,7 @@ namespace CinebotWp\Frontend;
 
 use CinebotWp\ReadModels\TitoloDetail;
 use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\LocaleRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\SettingsService;
 
@@ -25,6 +26,9 @@ final class ShortcodeHandler {
 	/** @var SettingsService|null */
 	private $settings;
 
+	/** @var LocaleRepository|null */
+	private $locales;
+
 	/** @var TemplateRenderer */
 	private $renderer;
 
@@ -37,11 +41,12 @@ final class ShortcodeHandler {
 	/**
 	 * Store repository and renderer collaborators.
 	 */
-	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?EventoRepository $events = null, ?SettingsService $settings = null ) {
+	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?EventoRepository $events = null, ?SettingsService $settings = null, ?LocaleRepository $locales = null ) {
 		$this->titles   = $titles;
 		$this->renderer = $renderer;
 		$this->events   = $events;
 		$this->settings = $settings;
+		$this->locales  = $locales;
 	}
 
 	/** Register shortcodes and AJAX actions. */
@@ -107,8 +112,6 @@ final class ShortcodeHandler {
 		}
 
 		$atts = $this->normalizeAttributes( array(
-			'tipo'    => isset( $_POST['tipo'] ) ? sanitize_text_field( wp_unslash( $_POST['tipo'] ) ) : '',
-			'comune'  => isset( $_POST['comune'] ) ? sanitize_text_field( wp_unslash( $_POST['comune'] ) ) : '',
 			'from'    => isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '',
 			'to'      => isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '',
 			'locale'  => isset( $_POST['locale'] ) ? absint( $_POST['locale'] ) : 0,
@@ -145,7 +148,20 @@ final class ShortcodeHandler {
 		if ( ! is_array( $attributes ) ) {
 			$attributes = array();
 		}
-		$atts = $this->normalizeAttributes( $attributes );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only filter, no mutation.
+		$url_overrides = array();
+		if ( isset( $_GET['from'] ) ) {
+			$url_overrides['from'] = sanitize_text_field( wp_unslash( $_GET['from'] ) );
+		}
+		if ( isset( $_GET['to'] ) ) {
+			$url_overrides['to'] = sanitize_text_field( wp_unslash( $_GET['to'] ) );
+		}
+		if ( isset( $_GET['locale'] ) ) {
+			$url_overrides['locale'] = absint( $_GET['locale'] );
+		}
+
+		$atts = $this->normalizeAttributes( array_merge( $attributes, $url_overrides ) );
 
 		$current_page = 1;
 		$total_pages  = 0;
@@ -178,6 +194,8 @@ final class ShortcodeHandler {
 			$base_url    = esc_url_raw( remove_query_arg( 'cinebot_page' ) );
 		}
 
+		$locali = null !== $this->locales ? $this->locales->findAll() : array();
+
 		$html = $this->renderer->render( 'programmazione-cards', array(
 			'cards'        => $cards,
 			'total'        => $total,
@@ -187,6 +205,7 @@ final class ShortcodeHandler {
 			'current_page' => $current_page,
 			'total_pages'  => $total_pages,
 			'base_url'     => $base_url,
+			'locali'       => $locali,
 		) );
 
 		$this->enqueueFrontendAssets();
