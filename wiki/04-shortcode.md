@@ -14,7 +14,6 @@ Questo shortcode è il principale del plugin e genera l'elenco (la "griglia") de
 - **`tipo`** (stringa): ID della tipologia di evento (es. `"45"` per "Teatro Prosa"). Mostra solo gli eventi di quella tipologia.
 - **`exclude_tipo`** (stringa): ID o lista di tipologie da escludere (separati da virgola, se supportato dal core).
 - **`locale`** (intero): ID del locale; se indicato, verranno estratti solo i titoli con spettacoli in tale locale.
-- **`comune`** (stringa): Nome esatto del comune (es. `"Bassano del Grappa"`).
 - **`from`** (stringa, YYYY-MM-DD): Data d'inizio per filtrare la visualizzazione (default: la data odierna).
 - **`to`** (stringa, YYYY-MM-DD): Data finale limite.
 - **`limit`** (intero): Il numero massimo totale di risultati ammessi dalla query. Il valore deve essere compreso fra 1 e 100. (default: `50`).

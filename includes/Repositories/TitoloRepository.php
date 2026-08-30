@@ -365,10 +365,6 @@ final class TitoloRepository {
 			$clauses[] = 'l.id = %d';
 			$values[] = $locale;
 		}
-		if ( isset( $filters['comune'] ) && '' !== trim( (string) $filters['comune'] ) ) {
-			$clauses[] = 'l.comune = %s';
-			$values[] = sanitize_text_field( (string) $filters['comune'] );
-		}
 		return array( 'joins' => $joins, 'where' => ' WHERE ' . implode( ' AND ', $clauses ), 'values' => $values );
 	}
 
