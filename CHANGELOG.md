@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/sandalf90/CinebotWP/compare/v1.0.0...v1.0.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **frontend:** remove comune filter from programmazione shortcode ([451bc4c](https://github.com/sandalf90/CinebotWP/commit/451bc4ca34a83f6f27835ed0cb9c621c54cbaaed))
+
 ## 1.0.0 (2026-08-24)
 
 
