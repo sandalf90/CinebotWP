@@ -1,11 +1,18 @@
-.cinebot-programmazione {
-	max-width: 1200px;
-	margin: 0 auto;
-}
+.cinebot-programmazione {}
 
 :root {
 	--cinebot-accent: #d63638;
 	--cinebot-text: #1d2327;
+}
+
+.cinebot-vedi-altro {
+	display: inline-block;
+	padding: .6em 1em;
+	background: var(--cinebot-accent, #d63638);
+	color: #fff;
+	border-radius: .6em;
+	text-decoration: none;
+	font-weight: 600;
 }
 
 .cinebot-filters {
@@ -13,38 +20,50 @@
 	flex-wrap: wrap;
 	gap: 8px;
 	margin-bottom: 20px;
-	padding: 12px;
+	padding: 1em;
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
-	border-radius: 4px;
+	border-radius: .6em;
+}
+
+.cinebot-filters-btn {
+	display: inline-block;
+	padding: .6em 1em;
+	background: var(--cinebot-accent, #d63638);
+	color: #fff;
+	border-radius: .6em;
+	text-decoration: none;
+	font-weight: 600;
+	border: none;
 }
 
 .cinebot-filters label {
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	font-size: 13px;
+	gap: .6em;
+	font-size: .7em;
 }
 
 .cinebot-filters input,
 .cinebot-filters select {
-	padding: 4px 8px;
+	padding: .5em;
 	border: 1px solid #8c8f94;
-	border-radius: 4px;
-	font-size: 13px;
+	border-radius: .6em;
+	font-size: .9em;
+	max-width: 180px;
 }
 
 .cinebot-cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 16px;
-	margin-bottom: 20px;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 1em;
+	margin-bottom: 1em;
 }
 
 .cinebot-card {
 	background: #fff;
 	border: 1px solid #dcdcde;
-	border-radius: 4px;
+	border-radius: .6em;
 	overflow: hidden;
 	transition: box-shadow 0.2s ease;
 }
@@ -59,6 +78,10 @@
 	text-decoration: none;
 }
 
+.cinebot-card-locandina {
+	position: relative;
+}
+
 .cinebot-card-locandina img {
 	width: 100%;
 	height: 200px;
@@ -66,8 +89,43 @@
 	display: block;
 }
 
+.cinebot-card-badge {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	background: #fff;
+	color: #000;
+	border-radius: 4px;
+	padding: 6px 8px;
+	text-align: center;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+}
+
+.cinebot-badge-day {
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.cinebot-badge-month {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	margin-top: 2px;
+}
+
+.cinebot-badge-range {
+	font-size: 13px;
+	font-weight: 700;
+}
+
 .cinebot-card-body {
-	padding: 16px;
+	padding: 1em;
 }
 
 .cinebot-card-title {
@@ -83,15 +141,17 @@
 	color: #50575e;
 }
 
-.cinebot-card-meta span {
-	display: inline-block;
-	margin-right: 12px;
+.cinebot-meta-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin-bottom: 6px;
 }
 
-.cinebot-card-prezzo {
-	margin: 4px 0;
-	font-weight: 600;
-	color: var(--cinebot-accent, #d63638);
+.cinebot-meta-row svg {
+	flex-shrink: 0;
+	color: #646970;
+	margin-top: 2px;
 }
 
 .cinebot-card-desc {
@@ -145,16 +205,12 @@
 		flex-direction: column;
 	}
 
-	.cinebot-eventi-tabella {
-		font-size: 13px;
-	}
+	.cinebot-eventi-tabella {}
 }
 
 .cinebot-eventi-tabella {
 	width: 100%;
 	border-collapse: collapse;
-	margin: 16px 0;
-	font-size: 14px;
 }
 
 .cinebot-eventi-tabella thead th {
@@ -177,12 +233,11 @@
 
 .cinebot-biglietto-link {
 	display: inline-block;
-	padding: 4px 12px;
+	padding: .6em 1em;
 	background: var(--cinebot-accent, #d63638);
 	color: #fff;
-	border-radius: 4px;
+	border-radius: .6em;
 	text-decoration: none;
-	font-size: 13px;
 	font-weight: 600;
 }
 
@@ -218,16 +273,11 @@
 
 .cinebot-dettaglio-titolo {
 	margin: 0 0 8px;
-	font-size: 28px;
-	font-weight: 700;
-	color: var(--cinebot-text, #1d2327);
 }
 
 .cinebot-dettaglio-autore {
 	margin: 0 0 16px;
-	font-size: 16px;
 	font-style: italic;
-	color: #50575e;
 }
 
 .cinebot-dettaglio-meta {
@@ -243,8 +293,6 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	font-size: 14px;
-	color: #50575e;
 }
 
 .cinebot-dettaglio-meta .cinebot-icon {
@@ -254,9 +302,6 @@
 
 .cinebot-dettaglio-desc {
 	margin: 0 0 24px;
-	font-size: 15px;
-	line-height: 1.6;
-	color: #3c434a;
 }
 
 .cinebot-dettaglio .cinebot-eventi-tabella {

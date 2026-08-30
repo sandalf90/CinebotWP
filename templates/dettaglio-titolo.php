@@ -84,7 +84,7 @@ if ( null !== $min || null !== $max ) {
 // --- Locale (replicates [cinebot_titolo_locale]) ---
 $locale_out = $detail->localeNomi ?? '';
 ?>
-<div class="cinebot-titolo-dettaglio">
+<div class="cinebot-dettaglio">
 	<?php if ( $title->locandinaUrl ) : ?>
 	<div class="cinebot-dettaglio-col-sx">
 		<img src="<?php echo esc_url( $title->locandinaUrl ); ?>" alt="<?php echo esc_attr( $title->titolo ); ?>" class="cinebot-dettaglio-locandina" />

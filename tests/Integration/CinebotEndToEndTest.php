@@ -90,7 +90,7 @@ final class CinebotEndToEndTest extends WP_UnitTestCase {
 		$handler = new ShortcodeHandler( $titles, new TemplateRenderer() );
 		$handler->register();
 
-		$html = do_shortcode( '[cinebot_programmazione tipo="45" comune="Bassano del Grappa"]' );
+		$html = do_shortcode( '[cinebot_programmazione tipo="45"]' );
 
 		self::assertStringContainsString( 'cinebot-programmazione', $html );
 		self::assertStringContainsString( 'cinebot-card', $html );

@@ -269,7 +269,6 @@ final class ScheduleRepositoryTest extends WP_UnitTestCase {
 		$filters = array(
 			'tipo' => '01',
 			'locale' => $rome,
-			'comune' => 'Roma',
 			'from' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS ),
 			'to' => gmdate( 'Y-m-d', time() + DAY_IN_SECONDS * 15 ),
 			'orderby' => 'titolo',

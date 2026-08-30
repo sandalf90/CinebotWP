@@ -238,11 +238,11 @@ final class TitoloRepository {
 	 */
 	public function findPublicSchedule( array $filters ): array {
 		$query = $this->public_query( $filters );
-		$orderby = isset( $filters['orderby'] ) && 'titolo' === $filters['orderby'] ? 't.titolo' : 'e.inizio';
+		$orderby = isset( $filters['orderby'] ) && 'titolo' === $filters['orderby'] ? 't.titolo' : 'MIN(e.inizio)';
 		$order = isset( $filters['order'] ) && in_array( strtoupper( (string) $filters['order'] ), array( 'ASC', 'DESC' ), true ) ? strtoupper( (string) $filters['order'] ) : 'ASC';
 		$limit = isset( $filters['limit'] ) ? max( 1, min( 100, (int) $filters['limit'] ) ) : 50;
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
-		$sql = $this->public_projection_sql() . $query['joins'] . $query['where'] . " ORDER BY {$orderby} {$order}, e.id ASC LIMIT %d OFFSET %d";
+		$sql = $this->public_projection_sql() . $query['joins'] . $query['where'] . " GROUP BY t.id ORDER BY {$orderby} {$order}, t.id ASC LIMIT %d OFFSET %d";
 		$values = array_merge( $query['values'], array( $limit, $offset ) );
 		// Projection, joins, and ordering are fixed or allowlisted; all values are prepared.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -263,7 +263,7 @@ final class TitoloRepository {
 	public function countPublicSchedule( array $filters ): int {
 		$query = $this->public_query( $filters );
 		$base = $this->db->prefix . 'cinebot_';
-		$sql = "SELECT COUNT(*) FROM {$base}eventi e" . $query['joins'] . $query['where'];
+		$sql = "SELECT COUNT(DISTINCT t.id) FROM {$base}eventi e" . $query['joins'] . $query['where'];
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return (int) $this->db->get_var( $this->db->prepare( $sql, $query['values'] ) );
 	}
@@ -365,17 +365,13 @@ final class TitoloRepository {
 			$clauses[] = 'l.id = %d';
 			$values[] = $locale;
 		}
-		if ( isset( $filters['comune'] ) && '' !== trim( (string) $filters['comune'] ) ) {
-			$clauses[] = 'l.comune = %s';
-			$values[] = sanitize_text_field( (string) $filters['comune'] );
-		}
 		return array( 'joins' => $joins, 'where' => ' WHERE ' . implode( ' AND ', $clauses ), 'values' => $values );
 	}
 
 	/** Return the fixed public projection and active-price subquery. */
 	private function public_projection_sql(): string {
 		$base = $this->db->prefix . 'cinebot_';
-		return "SELECT e.id evento_id, e.inizio, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, l.nome locale_nome, l.comune, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a, t.prevendita_da as prevendita_da, t.prevendita_a as prevendita_a FROM {$base}eventi e";
+		return "SELECT e.id evento_id, MIN(e.inizio) AS inizio, MAX(e.inizio) AS ultimo_giorno, COUNT(DISTINCT DATE(e.inizio)) AS giorni_count, t.id titolo_id, t.titolo, COALESCE(t.descrizione, '') descrizione, t.locandina_url, ty.codice tipo_codice, ty.descrizione tipo_descrizione, l.id locale_id, GROUP_CONCAT(DISTINCT l.nome SEPARATOR ', ') locale_nome, GROUP_CONCAT(DISTINCT l.comune SEPARATOR ', ') comune, t.prezzo_da as prezzo_da, t.prezzo_a as prezzo_a, t.prevendita_da as prevendita_da, t.prevendita_a as prevendita_a FROM {$base}eventi e";
 	}
 
 	/**

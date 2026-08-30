@@ -18,6 +18,7 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 /** @var int $total_pages */
 /** @var string $base_url */
 /** @var array<int,Locale> $locali */
+/** @var array<int,\CinebotWp\Models\TipologiaEvento> $tipologie */
 ?>
 <div class="cinebot-programmazione" data-instance="<?php echo esc_attr( (string) $instance ); ?>" data-detail-url="<?php echo esc_attr( $detail_url ); ?>">
 	<?php if ( $atts['show_filters'] ) : ?>
@@ -32,11 +33,14 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 			</label>
 			<label>
 				<?php esc_html_e( 'Tipo:', 'cinebot-wp' ); ?>
-				<input type="text" name="tipo" value="<?php echo esc_attr( $atts['tipo'] ); ?>" />
-			</label>
-			<label>
-				<?php esc_html_e( 'Comune:', 'cinebot-wp' ); ?>
-				<input type="text" name="comune" value="<?php echo esc_attr( $atts['comune'] ); ?>" />
+				<select name="tipo">
+					<option value=""><?php esc_html_e( 'Tutti', 'cinebot-wp' ); ?></option>
+					<?php foreach ( $tipologie as $tipologia ) : ?>
+						<option value="<?php echo esc_attr( $tipologia->codice ); ?>" <?php selected( $atts['tipo'], $tipologia->codice ); ?>>
+							<?php echo esc_html( $tipologia->descrizione ?: $tipologia->codice ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
 			</label>
 			<label>
 				<?php esc_html_e( 'Locale:', 'cinebot-wp' ); ?>
@@ -49,7 +53,7 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 					<?php endforeach; ?>
 				</select>
 			</label>
-			<button type="submit"><?php esc_html_e( 'Filtra', 'cinebot-wp' ); ?></button>
+			<button type="submit" class="cinebot-filters-btn"><?php esc_html_e( 'Filtra', 'cinebot-wp' ); ?></button>
 		</form>
 	<?php endif; ?>
 

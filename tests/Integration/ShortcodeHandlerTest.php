@@ -75,7 +75,6 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'cinebot-filters', $html );
 		self::assertStringContainsString( 'name="tipo"', $html );
 		self::assertStringContainsString( 'name="from"', $html );
-		self::assertStringContainsString( 'name="comune"', $html );
 	}
 
 	/** Shortcode hides filters when show_filters=false. */
@@ -198,7 +197,7 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		$html = do_shortcode( "[cinebot_titolo id=\"{$title_id}\"]" );
 
 		self::assertStringContainsString( 'Detail Test Show', $html );
-		self::assertStringContainsString( 'cinebot-titolo-dettaglio', $html );
+		self::assertStringContainsString( 'cinebot-dettaglio', $html );
 	}
 
 	/** [cinebot_titolo] returns empty for non-existent ID. */
