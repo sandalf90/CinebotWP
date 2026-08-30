@@ -13,6 +13,8 @@ namespace CinebotWp\ReadModels;
 final class ProgrammazioneCard {
 	public int $eventoId;
 	public string $inizio;
+	public ?string $ultimoGiorno;
+	public int $giorniCount;
 	public int $titoloId;
 	public string $titolo;
 	public string $descrizione;
@@ -36,6 +38,8 @@ final class ProgrammazioneCard {
 		$model                   = new self();
 		$model->eventoId         = isset( $row['evento_id'] ) ? (int) $row['evento_id'] : 0;
 		$model->inizio           = isset( $row['inizio'] ) ? (string) $row['inizio'] : '';
+		$model->ultimoGiorno     = isset( $row['ultimo_giorno'] ) ? (string) $row['ultimo_giorno'] : null;
+		$model->giorniCount      = isset( $row['giorni_count'] ) ? (int) $row['giorni_count'] : 1;
 		$model->titoloId         = isset( $row['titolo_id'] ) ? (int) $row['titolo_id'] : 0;
 		$model->titolo           = isset( $row['titolo'] ) ? (string) $row['titolo'] : '';
 		$model->descrizione      = isset( $row['descrizione'] ) ? (string) $row['descrizione'] : '';

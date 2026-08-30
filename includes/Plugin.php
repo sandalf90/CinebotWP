@@ -185,7 +185,8 @@ final class Plugin {
 			new TitoloRepository( $wpdb ),
 			new TemplateRenderer(),
 			new SettingsService(),
-			new LocaleRepository( $wpdb )
+			new LocaleRepository( $wpdb ),
+			new TipologiaRepository( $wpdb )
 		);
 	}
 

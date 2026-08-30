@@ -10,6 +10,7 @@ namespace CinebotWp\Frontend;
 use CinebotWp\ReadModels\TitoloDetail;
 use CinebotWp\Repositories\EventoRepository;
 use CinebotWp\Repositories\LocaleRepository;
+use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use CinebotWp\Services\SettingsService;
 
@@ -26,6 +27,9 @@ final class ShortcodeHandler {
 	/** @var LocaleRepository|null */
 	private $locales;
 
+	/** @var TipologiaRepository|null */
+	private $tipologie;
+
 	/** @var TemplateRenderer */
 	private $renderer;
 
@@ -38,11 +42,12 @@ final class ShortcodeHandler {
 	/**
 	 * Store repository and renderer collaborators.
 	 */
-	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?SettingsService $settings = null, ?LocaleRepository $locales = null ) {
-		$this->titles   = $titles;
-		$this->renderer = $renderer;
-		$this->settings = $settings;
-		$this->locales  = $locales;
+	public function __construct( TitoloRepository $titles, TemplateRenderer $renderer, ?SettingsService $settings = null, ?LocaleRepository $locales = null, ?TipologiaRepository $tipologie = null ) {
+		$this->titles    = $titles;
+		$this->renderer  = $renderer;
+		$this->settings  = $settings;
+		$this->locales   = $locales;
+		$this->tipologie = $tipologie;
 	}
 
 	/** Register shortcodes and AJAX actions. */
@@ -194,6 +199,7 @@ final class ShortcodeHandler {
 		}
 
 		$locali = null !== $this->locales ? $this->locales->findAll() : array();
+		$tipologie_list = null !== $this->tipologie ? $this->tipologie->findAll( true ) : array();
 
 		$html = $this->renderer->render( 'programmazione-cards', array(
 			'cards'        => $cards,
@@ -205,6 +211,7 @@ final class ShortcodeHandler {
 			'total_pages'  => $total_pages,
 			'base_url'     => $base_url,
 			'locali'       => $locali,
+			'tipologie'    => $tipologie_list,
 		) );
 
 		$this->enqueueFrontendAssets();
