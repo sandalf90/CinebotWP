@@ -41,6 +41,45 @@ final class TipologiaRepository {
 	}
 
 	/**
+	 * Return active event types that have at least one visible scheduled event.
+	 *
+	 * Mirrors the public schedule visibility predicates so the frontend
+	 * filter dropdown only shows types that actually appear in results.
+	 *
+	 * @param string $from ISO date (Y-m-d). Defaults to today (UTC).
+	 * @param string $to   Optional ISO upper-bound date (inclusive).
+	 * @return array<int,TipologiaEvento>
+	 */
+	public function findUsedInSchedule( string $from = '', string $to = '' ): array {
+		$base = $this->db->prefix . 'cinebot_';
+		$from = '' !== trim( $from ) ? sanitize_text_field( $from ) : current_time( 'Y-m-d', true );
+
+		$sql      = "SELECT DISTINCT ty.* FROM {$this->table} ty"
+			. " INNER JOIN {$base}titoli t ON t.tipoevento_codice = ty.codice"
+			. " INNER JOIN {$base}eventi e ON e.titolo_id = t.id"
+			. " WHERE ty.attivo = %d AND t.sync_active = %d AND e.sync_active = %d AND e.stato = %d AND e.inizio >= %s";
+		$values = array( 1, 1, 1, 3, $from );
+
+		if ( '' !== trim( $to ) ) {
+			$sql     .= " AND e.inizio < DATE_ADD(%s, INTERVAL 1 DAY)";
+			$values[] = sanitize_text_field( $to );
+		}
+
+		$sql .= ' ORDER BY ty.codice ASC';
+
+		// Table identifiers and predicates are fixed internal fragments; every value is prepared.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $this->db->get_results( $this->db->prepare( $sql, $values ), ARRAY_A );
+
+		return array_map(
+			static function ( array $row ): TipologiaEvento {
+				return TipologiaEvento::fromArray( $row );
+			},
+			is_array( $rows ) ? $rows : array()
+		);
+	}
+
+	/**
 	 * Return event types in ascending string-code order.
 	 *
 	 * @return array<int,TipologiaEvento>

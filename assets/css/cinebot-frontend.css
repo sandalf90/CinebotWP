@@ -18,12 +18,8 @@
 .cinebot-filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-	margin-bottom: 20px;
-	padding: 1em;
-	background: #f6f7f7;
-	border: 1px solid #dcdcde;
-	border-radius: .6em;
+	gap: 1em;
+	margin-bottom: 1em;
 }
 
 .cinebot-filters-btn {
@@ -41,15 +37,10 @@
 	display: flex;
 	align-items: center;
 	gap: .6em;
-	font-size: .7em;
 }
 
 .cinebot-filters input,
 .cinebot-filters select {
-	padding: .5em;
-	border: 1px solid #8c8f94;
-	border-radius: .6em;
-	font-size: .9em;
 	max-width: 180px;
 }
 
@@ -95,7 +86,7 @@
 	left: 10px;
 	background: #fff;
 	color: #000;
-	border-radius: 4px;
+	border-radius: .6em;
 	padding: 6px 8px;
 	text-align: center;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -107,20 +98,20 @@
 }
 
 .cinebot-badge-day {
-	font-size: 20px;
+	font-size: 1.2em;
 	font-weight: 700;
 	line-height: 1;
 }
 
 .cinebot-badge-month {
-	font-size: 11px;
+	font-size: .6em;
 	font-weight: 600;
 	text-transform: uppercase;
 	margin-top: 2px;
 }
 
 .cinebot-badge-range {
-	font-size: 13px;
+	font-size: 0.9rem;
 	font-weight: 700;
 }
 
@@ -130,14 +121,12 @@
 
 .cinebot-card-title {
 	margin: 0 0 8px;
-	font-size: 18px;
 	font-weight: 600;
 	color: var(--cinebot-text, #1d2327);
 }
 
 .cinebot-card-meta {
 	margin: 0 0 8px;
-	font-size: 14px;
 	color: #50575e;
 }
 
@@ -169,7 +158,6 @@
 	color: #fff;
 	border: none;
 	border-radius: 4px;
-	font-size: 14px;
 	cursor: pointer;
 }
 

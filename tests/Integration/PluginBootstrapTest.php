@@ -81,6 +81,10 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/autoload.php' ) );
 			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/Plugin.php' ) );
 
+			$entry_point_content = $archive->getFromName( 'cinebot-wp/cinebot-wp.php' );
+			self::assertIsString( $entry_point_content );
+			self::assertStringNotContainsString( 'x-release-please-version', $entry_point_content );
+
 			for ( $index = 0; $index < $archive->count(); ++$index ) {
 				$name = $archive->getNameIndex( $index );
 				self::assertIsString( $name );

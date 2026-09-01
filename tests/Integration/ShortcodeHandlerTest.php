@@ -16,6 +16,8 @@ use CinebotWp\Frontend\ShortcodeHandler;
 use CinebotWp\Frontend\TemplateRenderer;
 use CinebotWp\Models\Titolo;
 use CinebotWp\Repositories\EventoRepository;
+use CinebotWp\Repositories\LocaleRepository;
+use CinebotWp\Repositories\TipologiaRepository;
 use CinebotWp\Repositories\TitoloRepository;
 use WP_UnitTestCase;
 
@@ -41,7 +43,10 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		$this->events = new EventoRepository( $wpdb );
 		$this->handler = new ShortcodeHandler(
 			$this->titles,
-			new TemplateRenderer()
+			new TemplateRenderer(),
+			null,
+			new LocaleRepository( $wpdb ),
+			new TipologiaRepository( $wpdb )
 		);
 		$this->handler->register();
 		delete_transient( 'cinebot_prog_' . md5( wp_json_encode( array() ) ) );
@@ -220,6 +225,29 @@ final class ShortcodeHandlerTest extends WP_UnitTestCase {
 		$html2 = do_shortcode( '[cinebot_programmazione tipo="45"]' );
 
 		self::assertSame( $html1, $html2 );
+	}
+
+	/** Shortcode tipo dropdown only shows tipologie that have visible events. */
+	public function test_tipo_dropdown_only_shows_used_tipologie(): void {
+		$this->seed_active_event( '45', 'Teatro Prosa Show' );
+
+		$html = do_shortcode( '[cinebot_programmazione]' );
+
+		self::assertStringContainsString( 'Teatro Prosa', $html );
+		self::assertStringNotContainsString( 'CINEMA', $html );
+		self::assertStringNotContainsString( 'value="01"', $html );
+	}
+
+	/** Shortcode tipo dropdown shows all active tipologie when no events exist. */
+	public function test_tipo_dropdown_empty_when_no_events(): void {
+		$html = do_shortcode( '[cinebot_programmazione]' );
+
+		preg_match_all( '/<option value="([^"]*)"/', $html, $matches );
+		$option_values = $matches[1];
+
+		self::assertNotContains( '01', $option_values );
+		self::assertNotContains( '45', $option_values );
+		self::assertContains( '', $option_values );
 	}
 
 	/** Shortcode registers both shortcodes. */

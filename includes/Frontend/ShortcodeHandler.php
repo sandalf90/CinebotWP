@@ -198,7 +198,7 @@ final class ShortcodeHandler {
 		}
 
 		$locali = null !== $this->locales ? $this->locales->findAll() : array();
-		$tipologie_list = null !== $this->tipologie ? $this->tipologie->findAll( true ) : array();
+		$tipologie_list = null !== $this->tipologie ? $this->tipologie->findUsedInSchedule( $atts['from'], $atts['to'] ) : array();
 
 		$html = $this->renderer->render( 'programmazione-cards', array(
 			'cards'        => $cards,
