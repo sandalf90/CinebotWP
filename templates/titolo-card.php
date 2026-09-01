@@ -44,6 +44,7 @@ if ( $card->giorniCount <= 1 ) {
 } else {
 	$data_fmt = 'Da ' . $formatGiorno( substr( $card->inizio, 0, 10 ) ) . ' a ' . $formatGiorno( substr( (string) $card->ultimoGiorno, 0, 10 ) );
 }
+
 ?>
 <article class="cinebot-card" data-event-id="<?php echo esc_attr( (string) $card->eventoId ); ?>">
 	<?php if ( $card_link ) : ?>
