@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/sandalf90/CinebotWP/compare/v1.0.1...v1.0.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* add update versione to pluginbootstrpatest ([5dbf0bf](https://github.com/sandalf90/CinebotWP/commit/5dbf0bfa5f89ee48a308ee595488a2b93b50bd6f))
+
 ## [1.0.1](https://github.com/sandalf90/CinebotWP/compare/v1.0.0...v1.0.1) (2026-08-30)
 
 
