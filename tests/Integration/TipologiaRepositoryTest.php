@@ -220,37 +220,71 @@ final class TipologiaRepositoryTest extends WP_UnitTestCase {
 		$tomorrow = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS );
 		$yesterday = gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS );
 
-		self::$db->insert( "{$base}locali", array(
-			'nome' => 'Test Venue', 'comune' => 'Roma', 'source' => 'manual',
-			'created_at' => $now, 'updated_at' => $now,
-		) );
+		self::$db->insert(
+			"{$base}locali",
+			array(
+				'nome'       => 'Test Venue',
+				'comune'     => 'Roma',
+				'source'     => 'manual',
+				'created_at' => $now,
+				'updated_at' => $now,
+			)
+		);
 		$venue_id = (int) self::$db->insert_id;
 
-		self::$db->insert( "{$base}titoli", array(
-			'titolo' => 'Visible Show', 'tipoevento_codice' => '45',
-			'source' => 'manual', 'sync_active' => 1,
-			'created_at' => $now, 'updated_at' => $now,
-		) );
+		self::$db->insert(
+			"{$base}titoli",
+			array(
+				'titolo'            => 'Visible Show',
+				'tipoevento_codice' => '45',
+				'source'            => 'manual',
+				'sync_active'       => 1,
+				'created_at'        => $now,
+				'updated_at'        => $now,
+			)
+		);
 		$visible_title = (int) self::$db->insert_id;
 
-		self::$db->insert( "{$base}eventi", array(
-			'titolo_id' => $visible_title, 'inizio' => $tomorrow,
-			'locale_id' => $venue_id, 'stato' => 3, 'source' => 'manual',
-			'sync_active' => 1, 'created_at' => $now, 'updated_at' => $now,
-		) );
+		self::$db->insert(
+			"{$base}eventi",
+			array(
+				'titolo_id'   => $visible_title,
+				'inizio'      => $tomorrow,
+				'locale_id'   => $venue_id,
+				'stato'       => 3,
+				'source'      => 'manual',
+				'sync_active' => 1,
+				'created_at'  => $now,
+				'updated_at'  => $now,
+			)
+		);
 
-		self::$db->insert( "{$base}titoli", array(
-			'titolo' => 'Past Show', 'tipoevento_codice' => '53',
-			'source' => 'manual', 'sync_active' => 1,
-			'created_at' => $now, 'updated_at' => $now,
-		) );
+		self::$db->insert(
+			"{$base}titoli",
+			array(
+				'titolo'            => 'Past Show',
+				'tipoevento_codice' => '53',
+				'source'            => 'manual',
+				'sync_active'       => 1,
+				'created_at'        => $now,
+				'updated_at'        => $now,
+			)
+		);
 		$past_title = (int) self::$db->insert_id;
 
-		self::$db->insert( "{$base}eventi", array(
-			'titolo_id' => $past_title, 'inizio' => $yesterday,
-			'locale_id' => $venue_id, 'stato' => 3, 'source' => 'manual',
-			'sync_active' => 1, 'created_at' => $now, 'updated_at' => $now,
-		) );
+		self::$db->insert(
+			"{$base}eventi",
+			array(
+				'titolo_id'   => $past_title,
+				'inizio'      => $yesterday,
+				'locale_id'   => $venue_id,
+				'stato'       => 3,
+				'source'      => 'manual',
+				'sync_active' => 1,
+				'created_at'  => $now,
+				'updated_at'  => $now,
+			)
+		);
 
 		$used = $this->repository->findUsedInSchedule();
 

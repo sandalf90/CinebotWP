@@ -20,12 +20,13 @@ use CinebotWp\ReadModels\ProgrammazioneCard;
 <?php else : ?>
 	<?php foreach ( $cards as $card ) : ?>
 		<?php
-		// phpcs:ignore WordPress.Security.EscapeOutput -- template output is escaped inside.
-		echo $this->render( 'titolo-card', array(
+		$card_args = array(
 			'card'       => $card,
 			'show_desc'  => $show_desc,
 			'detail_url' => $detail_url,
-		) );
+		);
+		// phpcs:ignore WordPress.Security.EscapeOutput -- template output is escaped inside.
+		echo $this->render( 'titolo-card', $card_args );
 		?>
 	<?php endforeach; ?>
 <?php endif; ?>
