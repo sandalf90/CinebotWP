@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Cinebot WP
  * Description: Cinebot schedule synchronization for WordPress.
- * Version: 1.0.4  // x-release-please-version
+ * Version: 1.0.5  // x-release-please-version
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Text Domain: cinebot-wp
@@ -14,7 +14,7 @@
 use CinebotWp\Plugin;
 use CinebotWp\Updater;
 
-define( 'CINEBOT_WP_VERSION', '1.0.4' ); // x-release-please-version.
+define( 'CINEBOT_WP_VERSION', '1.0.5' ); // x-release-please-version.
 define( 'CINEBOT_WP_FILE', __FILE__ );
 define( 'CINEBOT_WP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CINEBOT_WP_URL', plugin_dir_url( __FILE__ ) );

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5](https://github.com/sandalf90/CinebotWP/compare/v1.0.4...v1.0.5) (2026-09-01)
+
+
+### Bug Fixes
+
+* PluginBootstrapTest ([9d7da2d](https://github.com/sandalf90/CinebotWP/commit/9d7da2d1eb6d524878570806484a74d9f59306cb))
+* PluginBootstrapTest ([0da57ab](https://github.com/sandalf90/CinebotWP/commit/0da57ab006aa2c21b81fbc2e630f934fce7a21d4))
+
 ## [1.0.4](https://github.com/sandalf90/CinebotWP/compare/v1.0.3...v1.0.4) (2026-09-01)
 
 
