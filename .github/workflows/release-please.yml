@@ -18,11 +18,6 @@ jobs:
     steps:
       - id: release
         uses: googleapis/release-please-action@v4
-        with:
-          release-type: simple
-          changelog-path: CHANGELOG.md
-          extra-files: |
-            cinebot-wp.php
 
   build:
     needs: release-please
