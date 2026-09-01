@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.4](https://github.com/sandalf90/CinebotWP/compare/v1.0.3...v1.0.4) (2026-09-01)
+
+
+### Bug Fixes
+
+* resolve lint errors in titolo-card-list and TipologiaRepositoryTest ([80babca](https://github.com/sandalf90/CinebotWP/commit/80babca95ba8ef1ab44ff231f25a67cfa63b602f))
+* resolve lint errors in titolo-card-list and TipologiaRepositoryTest ([322f1da](https://github.com/sandalf90/CinebotWP/commit/322f1daf6c913e67373ebe2a3598d29340778b07))
+* unify card template and UI refinements ([a8ac296](https://github.com/sandalf90/CinebotWP/commit/a8ac296e5c9bb22df4c4141ecb32641ecf9d5086))
+* unify card template between initial render and AJAX load-more ([76e7f2c](https://github.com/sandalf90/CinebotWP/commit/76e7f2c0c7c0164b48cb34192d0616275511e021))
+* update version assertion to 1.0.3 in PluginBootstrapTest ([e529b7a](https://github.com/sandalf90/CinebotWP/commit/e529b7a60aa0e843dcd2f6c647cf1879eac60408))
+* update version assertion to 1.0.3 in PluginBootstrapTest ([2e6da46](https://github.com/sandalf90/CinebotWP/commit/2e6da46609d02aeffa9e3cc27a90c3b33f335bd5))
+
 ## [1.0.3](https://github.com/sandalf90/CinebotWP/compare/v1.0.2...v1.0.3) (2026-09-01)
 
 
