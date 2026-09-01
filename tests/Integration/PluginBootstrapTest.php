@@ -40,7 +40,7 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 		self::assertSame( 1, $boot_count );
 		self::assertSame( Plugin::instance(), Plugin::instance() );
 		self::assertTrue( defined( 'CINEBOT_WP_VERSION' ) );
-		self::assertSame( '1.0.1', CINEBOT_WP_VERSION ); // x-release-please-version.
+		self::assertSame( '1.0.3', CINEBOT_WP_VERSION ); // x-release-please-version.
 	}
 
 	/**
