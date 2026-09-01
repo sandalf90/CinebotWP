@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.3](https://github.com/sandalf90/CinebotWP/compare/v1.0.2...v1.0.3) (2026-09-01)
+
+
+### Bug Fixes
+
+* auto-update version ([101325e](https://github.com/sandalf90/CinebotWP/commit/101325ef7faaabc71c0268f51a616bd0ba868c6e))
+* Update version in release manifest to 1.0.2 ([362bff3](https://github.com/sandalf90/CinebotWP/commit/362bff3190a5879d2d1fcdeeed229239fa391259))
+* Update version in release manifest to 1.0.2 ([505af4b](https://github.com/sandalf90/CinebotWP/commit/505af4bc6c45c6eafd350f0dd844b04b492ecc3a))
+
 ## [1.0.2](https://github.com/sandalf90/CinebotWP/compare/v1.0.1...v1.0.2) (2026-09-01)
 
 
