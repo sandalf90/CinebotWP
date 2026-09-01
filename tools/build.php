@@ -52,6 +52,24 @@ $add_file = static function ( string $source, string $destination ) use (
 	throw new RuntimeException( $message );
 };
 
+$add_string = static function ( string $contents, string $destination ) use (
+	$archive,
+	$archive_path,
+	$discard_archive
+): void {
+	if ( $archive->addFromString( $destination, $contents ) ) {
+		return;
+	}
+
+	$cleanup_failed = ! $discard_archive();
+	$message        = sprintf( 'Unable to add content to archive: %s', $destination );
+	if ( $cleanup_failed ) {
+		$message .= sprintf( '; incomplete archive could not be removed: %s', $archive_path );
+	}
+
+	throw new RuntimeException( $message );
+};
+
 if ( ! $archive->addEmptyDir( 'cinebot-wp' ) ) {
 	$discard_archive();
 	$message = sprintf( 'Unable to add archive root for source: %s', $project_root );
@@ -61,6 +79,19 @@ if ( ! $archive->addEmptyDir( 'cinebot-wp' ) ) {
 foreach ( $runtime as $entry ) {
 	$source = $project_root . '/' . $entry;
 	if ( is_file( $source ) ) {
+		if ( 'cinebot-wp.php' === $entry ) {
+			// Direct file read for archive building.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$contents = file_get_contents( $source );
+			if ( false === $contents ) {
+				$discard_archive();
+				throw new RuntimeException( sprintf( 'Unable to read file: %s', $source ) );
+			}
+			$clean_contents = (string) preg_replace( '/[ \t]*\/\/[ \t]*x-release-please-version[^\r\n]*/i', '', $contents );
+			$add_string( $clean_contents, 'cinebot-wp/' . $entry );
+			continue;
+		}
+
 		$add_file( $source, 'cinebot-wp/' . $entry );
 		continue;
 	}
