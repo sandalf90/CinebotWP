@@ -54,6 +54,15 @@ jobs:
             exit 1
           fi
 
+      - name: Verify ZIP contains vendor autoload
+        run: |
+          if docker compose run --rm php php -r "\$z=new ZipArchive(); \$z->open('dist/cinebot-wp.zip'); exit(\$z->locateName('cinebot-wp/vendor/autoload.php')===false?1:0);"; then
+            echo "ZIP contains vendor/autoload.php"
+          else
+            echo "ERROR: ZIP is missing vendor/autoload.php"
+            exit 1
+          fi
+
       - name: Upload artifact
         if: matrix.php == '8.2'
         uses: actions/upload-artifact@v4

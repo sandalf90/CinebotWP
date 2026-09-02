@@ -80,6 +80,7 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 			self::assertNotFalse( $archive->locateName( 'cinebot-wp/cinebot-wp.php' ) );
 			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/autoload.php' ) );
 			self::assertNotFalse( $archive->locateName( 'cinebot-wp/includes/Plugin.php' ) );
+			self::assertNotFalse( $archive->locateName( 'cinebot-wp/vendor/autoload.php' ) );
 
 			$entry_point_content = $archive->getFromName( 'cinebot-wp/cinebot-wp.php' );
 			self::assertIsString( $entry_point_content );
@@ -90,7 +91,7 @@ final class PluginBootstrapTest extends WP_UnitTestCase {
 				self::assertIsString( $name );
 				self::assertStringStartsWith( 'cinebot-wp/', $name );
 				self::assertDoesNotMatchRegularExpression(
-					'#^cinebot-wp/(?:\.git|\.github|docker|docs|specs|tests|tools|vendor|dist)(?:/|$)#',
+					'#^cinebot-wp/(?:\.git|\.github|docker|docs|specs|tests|tools|dist)(?:/|$)#',
 					$name
 				);
 			}

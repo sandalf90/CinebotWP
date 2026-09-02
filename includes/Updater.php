@@ -7,6 +7,8 @@
 
 namespace CinebotWp;
 
+use YahnisElsts\PluginUpdateChecker\v5p7\Vcs\GitHubApi;
+
 /**
  * Initialises the plugin-update-checker library to poll GitHub Releases
  * for new versions of the plugin.
@@ -21,7 +23,7 @@ final class Updater {
 	 * Boot the update checker if the library is available.
 	 */
 	public static function init(): void {
-		if ( ! class_exists( '\Puc_v4_Factory' ) ) {
+		if ( ! class_exists( \YahnisElsts\PluginUpdateChecker\v5\PucFactory::class ) ) {
 			$autoload = CINEBOT_WP_PATH . 'vendor/autoload.php';
 			if ( ! is_file( $autoload ) ) {
 				return;
@@ -30,16 +32,19 @@ final class Updater {
 			require $autoload;
 		}
 
-		if ( ! class_exists( '\Puc_v4_Factory' ) ) {
+		if ( ! class_exists( \YahnisElsts\PluginUpdateChecker\v5\PucFactory::class ) ) {
 			return;
 		}
 
-		$checker = \Puc_v4_Factory::buildUpdateChecker(
+		$checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 			self::REPO_URL,
 			CINEBOT_WP_FILE,
 			'cinebot-wp'
 		);
 
-		$checker->getVcsApi()->enableReleaseAssetsFilter();
+		$api = $checker->getVcsApi();
+		if ( $api instanceof GitHubApi ) {
+			$api->enableReleaseAssets();
+		}
 	}
 }
