@@ -7,6 +7,8 @@
 
 namespace CinebotWp;
 
+use YahnisElsts\PluginUpdateChecker\v5p7\Vcs\GitHubApi;
+
 /**
  * Initialises the plugin-update-checker library to poll GitHub Releases
  * for new versions of the plugin.
@@ -40,6 +42,9 @@ final class Updater {
 			'cinebot-wp'
 		);
 
-		$checker->getVcsApi()->enableReleaseAssetsFilter();
+		$api = $checker->getVcsApi();
+		if ( $api instanceof GitHubApi ) {
+			$api->enableReleaseAssets();
+		}
 	}
 }
