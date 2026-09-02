@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.7](https://github.com/sandalf90/CinebotWP/compare/v1.0.6...v1.0.7) (2026-09-02)
+
+
+### Bug Fixes
+
+* enlarge date badge and hide tipoDescrizione in card template ([fc09f72](https://github.com/sandalf90/CinebotWP/commit/fc09f729a5d4b3e9f95142dcee59fa79b9eaf6f0))
+* enlarge date badge and hide tipoDescrizione in card template ([37641ee](https://github.com/sandalf90/CinebotWP/commit/37641ee53b4abdb92ab0cb3c47d75e66473f82a2))
+
 ## [1.0.6](https://github.com/sandalf90/CinebotWP/compare/v1.0.5...v1.0.6) (2026-09-02)
 
 
