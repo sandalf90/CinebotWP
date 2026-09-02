@@ -76,11 +76,11 @@ if ( $card->giorniCount <= 1 ) {
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 					<span class="cinebot-card-locale"><?php echo esc_html( $card->localeNome ); ?></span>
 				</div>
-				<?php if ( $card->tipoDescrizione ) : ?>
+				<!-- <?php if ( $card->tipoDescrizione ) : ?>
 					<div class="cinebot-meta-row">
 						<span class="cinebot-card-tipo"><?php echo esc_html( $card->tipoDescrizione ); ?></span>
 					</div>
-				<?php endif; ?>
+				<?php endif; ?> -->
 			</div>
 			<?php if ( $show_desc && $card->descrizione ) : ?>
 				<p class="cinebot-card-desc"><?php echo esc_html( wp_trim_words( $card->descrizione, 30 ) ); ?></p>
