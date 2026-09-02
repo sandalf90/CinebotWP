@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.6](https://github.com/sandalf90/CinebotWP/compare/v1.0.5...v1.0.6) (2026-09-02)
+
+
+### Bug Fixes
+
+* use correct PUC v5 method name and instanceof guard for GitHubApi ([d3b94c9](https://github.com/sandalf90/CinebotWP/commit/d3b94c9f0a8067b90be10d97d513d22f7ef40cc6))
+* use PUC v5 factory class and include vendor in build zip ([af21337](https://github.com/sandalf90/CinebotWP/commit/af213370004c7b12bb32d0af0d47f405f591f824))
+* use PUC v5 factory class and include vendor in build zip ([038e171](https://github.com/sandalf90/CinebotWP/commit/038e171ce36583621aad020dac79fea06f6f8be9))
+
 ## [1.0.5](https://github.com/sandalf90/CinebotWP/compare/v1.0.4...v1.0.5) (2026-09-01)
 
 
