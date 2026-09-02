@@ -12,6 +12,7 @@ $runtime      = array(
 	'cinebot-wp.php',
 	'uninstall.php',
 	'includes',
+	'vendor',
 	'assets',
 	'templates',
 	'languages',
